@@ -1,6 +1,12 @@
 import { ShoppingCart, Star } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
+import productPrismAim from "@/assets/product-prism-aim.png";
+import productAimcolor from "@/assets/product-aimcolor.png";
+import productTpmBypass from "@/assets/product-tpm-bypass.png";
+import productSpoofer1Click from "@/assets/product-spoofer-1click.png";
+import productPrismSpoofer from "@/assets/product-prism-spoofer.png";
+
 interface Product {
   id: number;
   name: string;
@@ -14,71 +20,47 @@ interface Product {
 const products: Product[] = [
   {
     id: 1,
-    name: "Netflix Premium 30 Dias",
-    price: 19.90,
-    originalPrice: 44.90,
-    image: "https://images.unsplash.com/photo-1574375927938-d5a98e8ffe85?w=400&h=400&fit=crop",
-    category: "Streamings",
+    name: "Valorant Prism Aim",
+    price: 49.90,
+    originalPrice: 89.90,
+    image: productPrismAim,
+    category: "Valorant",
     rating: 5,
   },
   {
     id: 2,
-    name: "Disney+ Premium 30 Dias",
-    price: 14.90,
-    originalPrice: 33.90,
-    image: "https://images.unsplash.com/photo-1640499900704-b00dd6a1103a?w=400&h=400&fit=crop",
-    category: "Streamings",
+    name: "Valorant AimColor",
+    price: 39.90,
+    originalPrice: 79.90,
+    image: productAimcolor,
+    category: "Valorant",
     rating: 5,
   },
   {
     id: 3,
-    name: "Steam Points 5000",
+    name: "Valorant TPM Bypass",
     price: 29.90,
-    image: "https://images.unsplash.com/photo-1511512578047-dfb367046420?w=400&h=400&fit=crop",
-    category: "Pontos Steam",
-    rating: 4,
+    originalPrice: 59.90,
+    image: productTpmBypass,
+    category: "Valorant",
+    rating: 5,
   },
   {
     id: 4,
-    name: "Xbox Game Pass Ultimate",
-    price: 24.90,
-    originalPrice: 49.90,
-    image: "https://images.unsplash.com/photo-1621259182978-fbf93132d53d?w=400&h=400&fit=crop",
-    category: "Games",
+    name: "Valorant Spoofer 1 Click",
+    price: 34.90,
+    originalPrice: 69.90,
+    image: productSpoofer1Click,
+    category: "Valorant",
     rating: 5,
   },
   {
     id: 5,
-    name: "Discord Nitro 1 Mês",
-    price: 9.90,
-    originalPrice: 24.90,
-    image: "https://images.unsplash.com/photo-1614680376593-902f74cf0d41?w=400&h=400&fit=crop",
-    category: "Discord",
-    rating: 5,
-  },
-  {
-    id: 6,
-    name: "Spotify Premium 30 Dias",
-    price: 12.90,
-    originalPrice: 21.90,
-    image: "https://images.unsplash.com/photo-1611339555312-e607c8352fd7?w=400&h=400&fit=crop",
-    category: "Streamings",
-    rating: 5,
-  },
-  {
-    id: 7,
-    name: "HBO Max Premium",
-    price: 16.90,
-    image: "https://images.unsplash.com/photo-1522869635100-9f4c5e86aa37?w=400&h=400&fit=crop",
-    category: "Streamings",
-    rating: 4,
-  },
-  {
-    id: 8,
-    name: "ChatGPT Plus 30 Dias",
-    price: 49.90,
-    image: "https://images.unsplash.com/photo-1677442136019-21780ecad995?w=400&h=400&fit=crop",
-    category: "Software",
+    name: "Prism Spoofer",
+    price: 44.90,
+    originalPrice: 99.90,
+    image: productPrismSpoofer,
+    category: "Spoofer",
     rating: 5,
   },
 ];
@@ -97,7 +79,7 @@ const ProductsSection = () => {
         </div>
 
         {/* Products Grid */}
-        <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4">
+        <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-5">
           {products.map((product) => (
             <div
               key={product.id}
