@@ -12,7 +12,9 @@ import {
   Eye, 
   EyeOff,
   Trash2,
-  Phone
+  Phone,
+  CheckCircle,
+  Send
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -37,10 +39,18 @@ const ProfilePage = () => {
 
   const [fullName, setFullName] = useState("");
   const [phone, setPhone] = useState("");
+  const [phoneVerified, setPhoneVerified] = useState(false);
   const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
   const [isUploadingAvatar, setIsUploadingAvatar] = useState(false);
+  
+  // Phone verification states
+  const [pendingPhone, setPendingPhone] = useState("");
+  const [verificationCode, setVerificationCode] = useState("");
+  const [isSendingCode, setIsSendingCode] = useState(false);
+  const [isVerifyingCode, setIsVerifyingCode] = useState(false);
+  const [showVerificationInput, setShowVerificationInput] = useState(false);
   
   // Password change states
   const [newPassword, setNewPassword] = useState("");
@@ -62,7 +72,7 @@ const ProfilePage = () => {
       try {
         const { data, error } = await supabase
           .from("profiles")
-          .select("full_name, avatar_url, phone")
+          .select("full_name, avatar_url, phone, phone_verified")
           .eq("id", user.id)
           .maybeSingle();
 
@@ -71,6 +81,7 @@ const ProfilePage = () => {
         } else if (data) {
           setFullName(data.full_name || "");
           setPhone(data.phone || "");
+          setPhoneVerified(data.phone_verified || false);
           setAvatarUrl(data.avatar_url);
         }
       } catch (error) {
@@ -182,7 +193,7 @@ const ProfilePage = () => {
     try {
       const { error } = await supabase
         .from("profiles")
-        .update({ full_name: fullName, phone: phone })
+        .update({ full_name: fullName })
         .eq("id", user.id);
 
       if (error) {
@@ -195,6 +206,74 @@ const ProfilePage = () => {
       toast.error("Erro ao atualizar perfil.");
     } finally {
       setIsSaving(false);
+    }
+  };
+
+  const handleSendVerificationCode = async () => {
+    if (!pendingPhone) {
+      toast.error("Digite um número de telefone.");
+      return;
+    }
+
+    // Basic phone validation
+    const cleanedPhone = pendingPhone.replace(/\D/g, "");
+    if (cleanedPhone.length < 10 || cleanedPhone.length > 13) {
+      toast.error("Número de telefone inválido.");
+      return;
+    }
+
+    setIsSendingCode(true);
+
+    try {
+      const { data, error } = await supabase.functions.invoke("send-phone-verification", {
+        body: { phone: pendingPhone },
+      });
+
+      if (error) throw error;
+      if (data?.error) throw new Error(data.error);
+
+      toast.success("Código enviado! Verifique seu SMS.");
+      setShowVerificationInput(true);
+    } catch (error: any) {
+      console.error("Error sending verification code:", error);
+      toast.error(error.message || "Erro ao enviar código.");
+    } finally {
+      setIsSendingCode(false);
+    }
+  };
+
+  const handleVerifyCode = async () => {
+    if (!verificationCode) {
+      toast.error("Digite o código de verificação.");
+      return;
+    }
+
+    if (verificationCode.length !== 6) {
+      toast.error("O código deve ter 6 dígitos.");
+      return;
+    }
+
+    setIsVerifyingCode(true);
+
+    try {
+      const { data, error } = await supabase.functions.invoke("verify-phone-code", {
+        body: { code: verificationCode },
+      });
+
+      if (error) throw error;
+      if (data?.error) throw new Error(data.error);
+
+      toast.success("Telefone verificado com sucesso!");
+      setPhone(pendingPhone);
+      setPhoneVerified(true);
+      setShowVerificationInput(false);
+      setVerificationCode("");
+      setPendingPhone("");
+    } catch (error: any) {
+      console.error("Error verifying code:", error);
+      toast.error(error.message || "Erro ao verificar código.");
+    } finally {
+      setIsVerifyingCode(false);
     }
   };
 
@@ -433,21 +512,137 @@ const ProfilePage = () => {
                       />
                     </div>
 
-                    <div className="space-y-2">
-                      <Label htmlFor="phone" className="text-sm text-muted-foreground">
-                        Telefone
-                      </Label>
-                      <div className="relative">
-                        <Phone className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                        <Input
-                          id="phone"
-                          type="tel"
-                          placeholder="(00) 00000-0000"
-                          value={phone}
-                          onChange={(e) => setPhone(e.target.value)}
-                          className="pl-10 bg-muted/50 border-border focus:border-primary"
-                        />
+                    {/* Phone Section */}
+                    <div className="space-y-3">
+                      <div className="flex items-center justify-between">
+                        <Label className="text-sm text-muted-foreground">
+                          Telefone
+                        </Label>
+                        {phoneVerified && phone && (
+                          <span className="flex items-center gap-1 text-xs text-green-500">
+                            <CheckCircle className="h-3 w-3" />
+                            Verificado
+                          </span>
+                        )}
                       </div>
+                      
+                      {/* Current phone display */}
+                      {phone && phoneVerified ? (
+                        <div className="relative">
+                          <Phone className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                          <Input
+                            type="tel"
+                            value={phone}
+                            disabled
+                            className="pl-10 bg-muted/50 border-border text-muted-foreground"
+                          />
+                          <Button
+                            type="button"
+                            variant="link"
+                            size="sm"
+                            className="absolute right-2 top-1/2 -translate-y-1/2 text-xs"
+                            onClick={() => {
+                              setPendingPhone("");
+                              setShowVerificationInput(false);
+                              setVerificationCode("");
+                            }}
+                          >
+                            Alterar
+                          </Button>
+                        </div>
+                      ) : (
+                        <>
+                          {/* Phone input for new/unverified number */}
+                          <div className="relative">
+                            <Phone className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                            <Input
+                              type="tel"
+                              placeholder="(00) 00000-0000"
+                              value={pendingPhone}
+                              onChange={(e) => setPendingPhone(e.target.value)}
+                              disabled={showVerificationInput}
+                              className="pl-10 bg-muted/50 border-border focus:border-primary"
+                            />
+                          </div>
+
+                          {!showVerificationInput ? (
+                            <Button
+                              type="button"
+                              variant="outline"
+                              size="sm"
+                              className="w-full gap-2"
+                              onClick={handleSendVerificationCode}
+                              disabled={isSendingCode || !pendingPhone}
+                            >
+                              {isSendingCode ? (
+                                <>
+                                  <Loader2 className="h-4 w-4 animate-spin" />
+                                  Enviando...
+                                </>
+                              ) : (
+                                <>
+                                  <Send className="h-4 w-4" />
+                                  Enviar código SMS
+                                </>
+                              )}
+                            </Button>
+                          ) : (
+                            <div className="space-y-3">
+                              <div className="relative">
+                                <Input
+                                  type="text"
+                                  placeholder="Digite o código de 6 dígitos"
+                                  value={verificationCode}
+                                  onChange={(e) => setVerificationCode(e.target.value.replace(/\D/g, "").slice(0, 6))}
+                                  maxLength={6}
+                                  className="text-center text-lg tracking-widest bg-muted/50 border-border focus:border-primary"
+                                />
+                              </div>
+                              <div className="flex gap-2">
+                                <Button
+                                  type="button"
+                                  variant="outline"
+                                  size="sm"
+                                  className="flex-1"
+                                  onClick={() => {
+                                    setShowVerificationInput(false);
+                                    setVerificationCode("");
+                                  }}
+                                >
+                                  Cancelar
+                                </Button>
+                                <Button
+                                  type="button"
+                                  size="sm"
+                                  className="flex-1 gap-2"
+                                  onClick={handleVerifyCode}
+                                  disabled={isVerifyingCode || verificationCode.length !== 6}
+                                >
+                                  {isVerifyingCode ? (
+                                    <>
+                                      <Loader2 className="h-4 w-4 animate-spin" />
+                                      Verificando...
+                                    </>
+                                  ) : (
+                                    <>
+                                      <CheckCircle className="h-4 w-4" />
+                                      Verificar
+                                    </>
+                                  )}
+                                </Button>
+                              </div>
+                              <button
+                                type="button"
+                                className="w-full text-xs text-muted-foreground hover:text-foreground"
+                                onClick={handleSendVerificationCode}
+                                disabled={isSendingCode}
+                              >
+                                {isSendingCode ? "Enviando..." : "Reenviar código"}
+                              </button>
+                            </div>
+                          )}
+                        </>
+                      )}
                     </div>
 
                     <Button
