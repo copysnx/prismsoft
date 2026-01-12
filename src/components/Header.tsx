@@ -1,7 +1,6 @@
 import { useState, useEffect } from "react";
-import { Search, User, ShoppingCart, LogOut, Shield, ShoppingBag } from "lucide-react";
+import { User, ShoppingCart, LogOut, Shield, ShoppingBag } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { useNavigate, Link } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
 import { useAdmin } from "@/hooks/useAdmin";
@@ -58,13 +57,6 @@ const Header = () => {
             <span className="text-lg font-bold">Prism <span className="text-gradient">SysteM</span></span>
           </Link>
 
-          {/* Search Bar */}
-          <div className="hidden md:flex flex-1 max-w-md mx-8">
-            <div className="relative w-full">
-              <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-              <Input type="text" placeholder="Buscar produto" className="w-full pl-10 bg-muted border-border focus:border-primary focus:ring-primary" />
-            </div>
-          </div>
 
           {/* Actions */}
           <div className="flex items-center gap-3">
