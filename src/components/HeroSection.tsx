@@ -21,7 +21,7 @@ const HeroSection = () => {
                 </svg>)}
             </div>
             <span className="text-sm text-muted-foreground">
-              Veja as nossas avaliações no <span className="text-purple-400 font-medium">Trustpilot</span>
+              Veja as nossas avaliações no <span className="text-purple-400 font-medium">Discord</span>
             </span>
           </div>
 

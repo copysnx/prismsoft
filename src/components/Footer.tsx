@@ -1,8 +1,6 @@
 import { MessageCircle, Mail, Instagram, Twitter } from "lucide-react";
-
 const Footer = () => {
-  return (
-    <footer className="border-t border-border bg-card/50">
+  return <footer className="border-t border-border bg-card/50">
       <div className="container mx-auto px-4 py-12">
         <div className="grid gap-8 md:grid-cols-4">
           {/* Logo & Description */}
@@ -11,8 +9,7 @@ const Footer = () => {
               <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-gradient-to-br from-purple-500 to-fuchsia-500">
                 <span className="text-lg font-black text-white">N</span>
               </div>
-              <span className="text-lg font-bold">
-                NexT <span className="text-gradient">SysteM</span>
+              <span className="text-lg font-bold">Prism SysteM<span className="text-gradient">SysteM</span>
               </span>
             </a>
             <p className="text-sm text-muted-foreground max-w-sm">
@@ -56,8 +53,6 @@ const Footer = () => {
           <p>© 2025 NexTSysteM. Todos os direitos reservados.</p>
         </div>
       </div>
-    </footer>
-  );
+    </footer>;
 };
-
 export default Footer;
