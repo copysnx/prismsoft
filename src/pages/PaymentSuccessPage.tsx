@@ -7,6 +7,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import Header from '@/components/Header';
 import Footer from '@/components/Footer';
+import BackButton from '@/components/BackButton';
 interface DeliveredKey {
   id: string;
   keyValue: string;
@@ -233,6 +234,11 @@ const PaymentSuccessPage = () => {
       
       <main className="container mx-auto px-4 py-8 pt-24">
         <div className="max-w-2xl mx-auto">
+          {/* Back Button */}
+          <div className="mb-6">
+            <BackButton to="/" />
+          </div>
+
           {/* Success Card */}
           <div className="bg-card border border-border rounded-2xl p-8 text-center">
             {/* Success Icon */}

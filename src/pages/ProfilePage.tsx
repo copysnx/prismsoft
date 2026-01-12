@@ -25,6 +25,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
+import BackButton from "@/components/BackButton";
 
 // Import the purchases page content components
 import PurchasesContent from "@/components/profile/PurchasesContent";
@@ -348,6 +349,11 @@ const ProfilePage = () => {
 
       <main className="flex-1 pt-24 pb-12 relative z-10">
         <div className="container mx-auto px-4 max-w-5xl">
+          {/* Back Button */}
+          <div className="mb-6">
+            <BackButton to="/" />
+          </div>
+
           {/* Page Title */}
           <div className="mb-8">
             <h1 className="text-3xl font-bold text-foreground mb-2">Meus Produtos</h1>
