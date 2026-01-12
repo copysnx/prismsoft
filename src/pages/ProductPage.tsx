@@ -101,16 +101,6 @@ const ProductPage = () => {
 
   const handleAddToCart = () => {
     if (!product || !selectedVariation) return;
-
-    const stock = getVariationStock(selectedVariation.id);
-    if (stock <= 0) {
-      toast({
-        title: "Produto sem estoque",
-        description: "Este produto está temporariamente indisponível.",
-        variant: "destructive",
-      });
-      return;
-    }
     
     addItem({
       productId: product.id,
@@ -131,16 +121,6 @@ const ProductPage = () => {
 
   const handleBuyNow = () => {
     if (!product || !selectedVariation) return;
-
-    const stock = getVariationStock(selectedVariation.id);
-    if (stock <= 0) {
-      toast({
-        title: "Produto sem estoque",
-        description: "Este produto está temporariamente indisponível.",
-        variant: "destructive",
-      });
-      return;
-    }
 
     handleAddToCart();
     navigate('/checkout');
@@ -259,13 +239,10 @@ const ProductPage = () => {
                         <button
                           key={variation.id}
                           onClick={() => handleVariationChange(variation)}
-                          disabled={isOutOfStock}
                           className={`w-full flex items-center justify-between p-4 rounded-xl border transition-all ${
-                            isOutOfStock
-                              ? "border-border bg-muted/20 opacity-60 cursor-not-allowed"
-                              : selectedVariation?.id === variation.id
-                                ? "border-purple-500 bg-purple-500/10"
-                                : "border-border hover:border-purple-500/50 bg-muted/30"
+                            selectedVariation?.id === variation.id
+                              ? "border-purple-500 bg-purple-500/10"
+                              : "border-border hover:border-purple-500/50 bg-muted/30"
                           }`}
                         >
                           <div className="flex items-center gap-3">
@@ -315,21 +292,32 @@ const ProductPage = () => {
 
                 {/* Action Buttons */}
                 <div className="space-y-3">
-                  {selectedVariation && getVariationStock(selectedVariation.id) > 0 ? (
-                    <>
-                      <Button variant="hero" size="lg" className="w-full gap-2" onClick={handleBuyNow}>
-                        <ShoppingCart className="h-5 w-5" />
-                        Comprar agora
-                      </Button>
-                      <Button variant="heroOutline" size="lg" className="w-full gap-2" onClick={handleAddToCart}>
-                        Adicionar ao carrinho
-                      </Button>
-                    </>
-                  ) : (
-                    <Button variant="outline" size="lg" className="w-full gap-2" disabled>
-                      Produto indisponível
-                    </Button>
+                  {selectedVariation && getVariationStock(selectedVariation.id) <= 0 && (
+                    <div className="p-4 rounded-xl bg-amber-500/10 border border-amber-500/30 mb-2">
+                      <p className="text-sm text-amber-400 font-medium mb-2">
+                        ⚠️ Produto sem estoque automático
+                      </p>
+                      <p className="text-xs text-muted-foreground">
+                        Após a compra, entre no nosso{" "}
+                        <a 
+                          href="https://discord.gg/HEKCFhaXwF" 
+                          target="_blank" 
+                          rel="noopener noreferrer"
+                          className="text-purple-400 hover:text-purple-300 underline"
+                        >
+                          Discord
+                        </a>{" "}
+                        e abra um ticket para resgatar seu produto.
+                      </p>
+                    </div>
                   )}
+                  <Button variant="hero" size="lg" className="w-full gap-2" onClick={handleBuyNow}>
+                    <ShoppingCart className="h-5 w-5" />
+                    Comprar agora
+                  </Button>
+                  <Button variant="heroOutline" size="lg" className="w-full gap-2" onClick={handleAddToCart}>
+                    Adicionar ao carrinho
+                  </Button>
                 </div>
               </div>
 
