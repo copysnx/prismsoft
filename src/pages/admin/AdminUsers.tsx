@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { ArrowLeft, Users, Shield, ShieldCheck, Search, RefreshCw, ChevronLeft, ChevronRight, Mail, Calendar } from "lucide-react";
+import { ArrowLeft, Users, Shield, ShieldCheck, Search, RefreshCw, ChevronLeft, ChevronRight, Calendar, Store, UserCog, X } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { useAdmin } from "@/hooks/useAdmin";
 import { Button } from "@/components/ui/button";
@@ -9,6 +9,15 @@ import { supabase } from "@/integrations/supabase/client";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { useToast } from "@/hooks/use-toast";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+
+type AppRole = 'admin' | 'user' | 'reseller';
 
 interface UserProfile {
   id: string;
@@ -20,14 +29,19 @@ interface UserProfile {
 
 interface UserRole {
   user_id: string;
-  role: 'admin' | 'user';
+  role: AppRole;
 }
 
-interface UserWithRole extends UserProfile {
-  email?: string;
-  role: 'admin' | 'user';
+interface UserWithRoles extends UserProfile {
+  roles: AppRole[];
   orders_count: number;
 }
+
+const ROLE_CONFIG: Record<AppRole, { label: string; color: string; icon: React.ComponentType<{ className?: string }> }> = {
+  admin: { label: 'Admin', color: 'bg-amber-500/20 text-amber-400 border-amber-500/30', icon: ShieldCheck },
+  reseller: { label: 'Reseller', color: 'bg-purple-500/20 text-purple-400 border-purple-500/30', icon: Store },
+  user: { label: 'Usuário', color: 'bg-blue-500/20 text-blue-400 border-blue-500/30', icon: Shield },
+};
 
 const AdminUsers = () => {
   const { user, loading: authLoading } = useAuth();
@@ -35,11 +49,14 @@ const AdminUsers = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
 
-  const [users, setUsers] = useState<UserWithRole[]>([]);
+  const [users, setUsers] = useState<UserWithRoles[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [currentPage, setCurrentPage] = useState(1);
-  const [roleFilter, setRoleFilter] = useState<'all' | 'admin' | 'user'>('all');
+  const [roleFilter, setRoleFilter] = useState<'all' | AppRole>('all');
+  const [selectedUser, setSelectedUser] = useState<UserWithRoles | null>(null);
+  const [isRoleDialogOpen, setIsRoleDialogOpen] = useState(false);
+  const [updatingRole, setUpdatingRole] = useState(false);
   const itemsPerPage = 10;
 
   useEffect(() => {
@@ -85,10 +102,12 @@ const AdminUsers = () => {
 
       if (ordersError) throw ordersError;
 
-      // Create a map of user_id to role
-      const rolesMap = new Map<string, 'admin' | 'user'>();
+      // Create a map of user_id to roles array
+      const rolesMap = new Map<string, AppRole[]>();
       (roles || []).forEach((r: UserRole) => {
-        rolesMap.set(r.user_id, r.role);
+        const existing = rolesMap.get(r.user_id) || [];
+        existing.push(r.role);
+        rolesMap.set(r.user_id, existing);
       });
 
       // Count orders per user
@@ -100,9 +119,9 @@ const AdminUsers = () => {
       });
 
       // Combine data
-      const usersWithRoles: UserWithRole[] = (profiles || []).map((profile: UserProfile) => ({
+      const usersWithRoles: UserWithRoles[] = (profiles || []).map((profile: UserProfile) => ({
         ...profile,
-        role: rolesMap.get(profile.id) || 'user',
+        roles: rolesMap.get(profile.id) || [],
         orders_count: ordersCountMap.get(profile.id) || 0,
       }));
 
@@ -119,42 +138,77 @@ const AdminUsers = () => {
     }
   };
 
-  const toggleAdminRole = async (userId: string, currentRole: 'admin' | 'user') => {
+  const toggleRole = async (userId: string, role: AppRole, hasRole: boolean) => {
+    if (userId === user?.id && role === 'admin') {
+      toast({
+        title: "Ação não permitida",
+        description: "Você não pode remover sua própria permissão de admin.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setUpdatingRole(true);
     try {
-      if (currentRole === 'admin') {
-        // Remove admin role
+      if (hasRole) {
+        // Remove role
         const { error } = await supabase
           .from('user_roles')
           .delete()
           .eq('user_id', userId)
-          .eq('role', 'admin');
+          .eq('role', role);
 
         if (error) throw error;
+
+        toast({
+          title: "Cargo removido",
+          description: `O cargo de ${ROLE_CONFIG[role].label} foi removido.`,
+        });
       } else {
-        // Add admin role
+        // Add role
         const { error } = await supabase
           .from('user_roles')
-          .insert({ user_id: userId, role: 'admin' });
+          .insert({ user_id: userId, role });
 
         if (error) throw error;
+
+        toast({
+          title: "Cargo adicionado",
+          description: `O cargo de ${ROLE_CONFIG[role].label} foi adicionado.`,
+        });
       }
 
-      toast({
-        title: currentRole === 'admin' ? "Permissão removida" : "Permissão concedida",
-        description: currentRole === 'admin' 
-          ? "O usuário não é mais administrador."
-          : "O usuário agora é administrador.",
-      });
-
-      fetchUsers();
+      await fetchUsers();
+      
+      // Update selected user if dialog is open
+      if (selectedUser && selectedUser.id === userId) {
+        const updatedUsers = users.map(u => {
+          if (u.id === userId) {
+            const newRoles = hasRole 
+              ? u.roles.filter(r => r !== role)
+              : [...u.roles, role];
+            return { ...u, roles: newRoles };
+          }
+          return u;
+        });
+        const updatedUser = updatedUsers.find(u => u.id === userId);
+        if (updatedUser) setSelectedUser(updatedUser);
+      }
     } catch (error) {
       console.error('Error updating role:', error);
       toast({
-        title: "Erro ao atualizar permissão",
+        title: "Erro ao atualizar cargo",
         description: "Tente novamente mais tarde.",
         variant: "destructive",
       });
+    } finally {
+      setUpdatingRole(false);
     }
+  };
+
+  const openRoleDialog = (userToEdit: UserWithRoles) => {
+    setSelectedUser(userToEdit);
+    setIsRoleDialogOpen(true);
   };
 
   const filteredUsers = users.filter(u => {
@@ -162,7 +216,7 @@ const AdminUsers = () => {
       (u.full_name?.toLowerCase() || '').includes(searchTerm.toLowerCase()) ||
       u.id.toLowerCase().includes(searchTerm.toLowerCase());
     
-    const matchesRole = roleFilter === 'all' || u.role === roleFilter;
+    const matchesRole = roleFilter === 'all' || u.roles.includes(roleFilter);
     
     return matchesSearch && matchesRole;
   });
@@ -175,8 +229,15 @@ const AdminUsers = () => {
 
   const stats = {
     total: users.length,
-    admins: users.filter(u => u.role === 'admin').length,
-    regularUsers: users.filter(u => u.role === 'user').length,
+    admins: users.filter(u => u.roles.includes('admin')).length,
+    resellers: users.filter(u => u.roles.includes('reseller')).length,
+    regularUsers: users.filter(u => u.roles.length === 0).length,
+  };
+
+  const getPrimaryRole = (roles: AppRole[]): AppRole => {
+    if (roles.includes('admin')) return 'admin';
+    if (roles.includes('reseller')) return 'reseller';
+    return 'user';
   };
 
   if (authLoading || adminLoading) {
@@ -202,7 +263,7 @@ const AdminUsers = () => {
             </Button>
             <div>
               <h1 className="text-2xl font-bold text-gradient">Usuários</h1>
-              <p className="text-sm text-muted-foreground">Gerenciar contas e permissões</p>
+              <p className="text-sm text-muted-foreground">Gerenciar contas e cargos</p>
             </div>
           </div>
           <Button variant="outline" size="sm" onClick={fetchUsers} disabled={loading}>
@@ -214,13 +275,13 @@ const AdminUsers = () => {
 
       <main className="container mx-auto px-4 py-8">
         {/* Stats Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
           <div className="bg-card rounded-xl border border-border p-4">
             <div className="flex items-center gap-3 mb-2">
               <div className="w-10 h-10 rounded-lg bg-gradient-to-r from-purple-500 to-fuchsia-500 flex items-center justify-center">
                 <Users className="h-5 w-5 text-white" />
               </div>
-              <span className="text-sm text-muted-foreground">Total de Usuários</span>
+              <span className="text-sm text-muted-foreground">Total</span>
             </div>
             <div className="text-2xl font-bold">{stats.total}</div>
           </div>
@@ -230,9 +291,19 @@ const AdminUsers = () => {
               <div className="w-10 h-10 rounded-lg bg-gradient-to-r from-amber-500 to-orange-500 flex items-center justify-center">
                 <ShieldCheck className="h-5 w-5 text-white" />
               </div>
-              <span className="text-sm text-muted-foreground">Administradores</span>
+              <span className="text-sm text-muted-foreground">Admins</span>
             </div>
             <div className="text-2xl font-bold text-amber-400">{stats.admins}</div>
+          </div>
+
+          <div className="bg-card rounded-xl border border-border p-4">
+            <div className="flex items-center gap-3 mb-2">
+              <div className="w-10 h-10 rounded-lg bg-gradient-to-r from-purple-500 to-pink-500 flex items-center justify-center">
+                <Store className="h-5 w-5 text-white" />
+              </div>
+              <span className="text-sm text-muted-foreground">Resellers</span>
+            </div>
+            <div className="text-2xl font-bold text-purple-400">{stats.resellers}</div>
           </div>
 
           <div className="bg-card rounded-xl border border-border p-4">
@@ -240,7 +311,7 @@ const AdminUsers = () => {
               <div className="w-10 h-10 rounded-lg bg-gradient-to-r from-blue-500 to-indigo-500 flex items-center justify-center">
                 <Shield className="h-5 w-5 text-white" />
               </div>
-              <span className="text-sm text-muted-foreground">Usuários Comuns</span>
+              <span className="text-sm text-muted-foreground">Usuários</span>
             </div>
             <div className="text-2xl font-bold">{stats.regularUsers}</div>
           </div>
@@ -260,8 +331,8 @@ const AdminUsers = () => {
               className="pl-10"
             />
           </div>
-          <div className="flex gap-2">
-            {(['all', 'admin', 'user'] as const).map((role) => (
+          <div className="flex gap-2 flex-wrap">
+            {(['all', 'admin', 'reseller', 'user'] as const).map((role) => (
               <button
                 key={role}
                 onClick={() => {
@@ -274,7 +345,7 @@ const AdminUsers = () => {
                     : 'bg-muted text-muted-foreground hover:bg-muted/80'
                 }`}
               >
-                {role === 'all' ? 'Todos' : role === 'admin' ? 'Admins' : 'Usuários'}
+                {role === 'all' ? 'Todos' : ROLE_CONFIG[role].label}
               </button>
             ))}
           </div>
@@ -290,7 +361,7 @@ const AdminUsers = () => {
                   <th className="px-4 py-3 text-left text-xs font-medium text-muted-foreground uppercase">ID</th>
                   <th className="px-4 py-3 text-left text-xs font-medium text-muted-foreground uppercase">Criado em</th>
                   <th className="px-4 py-3 text-left text-xs font-medium text-muted-foreground uppercase">Pedidos</th>
-                  <th className="px-4 py-3 text-left text-xs font-medium text-muted-foreground uppercase">Função</th>
+                  <th className="px-4 py-3 text-left text-xs font-medium text-muted-foreground uppercase">Cargos</th>
                   <th className="px-4 py-3 text-left text-xs font-medium text-muted-foreground uppercase">Ações</th>
                 </tr>
               </thead>
@@ -308,70 +379,72 @@ const AdminUsers = () => {
                     </td>
                   </tr>
                 ) : (
-                  paginatedUsers.map((u) => (
-                    <tr key={u.id} className="hover:bg-muted/30 transition-colors">
-                      <td className="px-4 py-3">
-                        <div className="flex items-center gap-3">
-                          <div className="w-10 h-10 rounded-full bg-gradient-to-r from-purple-500 to-fuchsia-500 flex items-center justify-center text-white font-medium">
-                            {u.avatar_url ? (
-                              <img src={u.avatar_url} alt="" className="w-full h-full rounded-full object-cover" />
+                  paginatedUsers.map((u) => {
+                    const primaryRole = getPrimaryRole(u.roles);
+                    return (
+                      <tr key={u.id} className="hover:bg-muted/30 transition-colors">
+                        <td className="px-4 py-3">
+                          <div className="flex items-center gap-3">
+                            <div className="w-10 h-10 rounded-full bg-gradient-to-r from-purple-500 to-fuchsia-500 flex items-center justify-center text-white font-medium overflow-hidden">
+                              {u.avatar_url ? (
+                                <img src={u.avatar_url} alt="" className="w-full h-full object-cover" />
+                              ) : (
+                                (u.full_name?.[0] || 'U').toUpperCase()
+                              )}
+                            </div>
+                            <div>
+                              <div className="font-medium">{u.full_name || 'Sem nome'}</div>
+                            </div>
+                          </div>
+                        </td>
+                        <td className="px-4 py-3">
+                          <span className="text-xs font-mono text-muted-foreground">
+                            {u.id.slice(0, 8)}...
+                          </span>
+                        </td>
+                        <td className="px-4 py-3 text-sm">
+                          <div className="flex items-center gap-2 text-muted-foreground">
+                            <Calendar className="h-4 w-4" />
+                            {format(new Date(u.created_at), "dd/MM/yyyy", { locale: ptBR })}
+                          </div>
+                        </td>
+                        <td className="px-4 py-3">
+                          <span className="px-2 py-1 rounded-lg bg-muted text-sm font-medium">
+                            {u.orders_count}
+                          </span>
+                        </td>
+                        <td className="px-4 py-3">
+                          <div className="flex flex-wrap gap-1">
+                            {u.roles.length === 0 ? (
+                              <span className={`px-2 py-1 rounded-lg text-xs font-medium border ${ROLE_CONFIG.user.color}`}>
+                                Usuário
+                              </span>
                             ) : (
-                              (u.full_name?.[0] || 'U').toUpperCase()
+                              u.roles.map(role => (
+                                <span 
+                                  key={role} 
+                                  className={`px-2 py-1 rounded-lg text-xs font-medium border ${ROLE_CONFIG[role].color}`}
+                                >
+                                  {ROLE_CONFIG[role].label}
+                                </span>
+                              ))
                             )}
                           </div>
-                          <div>
-                            <div className="font-medium">{u.full_name || 'Sem nome'}</div>
-                          </div>
-                        </div>
-                      </td>
-                      <td className="px-4 py-3">
-                        <span className="text-xs font-mono text-muted-foreground">
-                          {u.id.slice(0, 8)}...
-                        </span>
-                      </td>
-                      <td className="px-4 py-3 text-sm">
-                        <div className="flex items-center gap-2 text-muted-foreground">
-                          <Calendar className="h-4 w-4" />
-                          {format(new Date(u.created_at), "dd/MM/yyyy", { locale: ptBR })}
-                        </div>
-                      </td>
-                      <td className="px-4 py-3">
-                        <span className="px-2 py-1 rounded-lg bg-muted text-sm font-medium">
-                          {u.orders_count}
-                        </span>
-                      </td>
-                      <td className="px-4 py-3">
-                        <span className={`px-2 py-1 rounded-lg text-xs font-medium ${
-                          u.role === 'admin'
-                            ? 'bg-amber-500/20 text-amber-400'
-                            : 'bg-blue-500/20 text-blue-400'
-                        }`}>
-                          {u.role === 'admin' ? 'Admin' : 'Usuário'}
-                        </span>
-                      </td>
-                      <td className="px-4 py-3">
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => toggleAdminRole(u.id, u.role)}
-                          disabled={u.id === user?.id}
-                          className={u.role === 'admin' ? 'border-red-500/30 text-red-400 hover:bg-red-500/10' : 'border-amber-500/30 text-amber-400 hover:bg-amber-500/10'}
-                        >
-                          {u.role === 'admin' ? (
-                            <>
-                              <Shield className="h-4 w-4 mr-1" />
-                              Remover Admin
-                            </>
-                          ) : (
-                            <>
-                              <ShieldCheck className="h-4 w-4 mr-1" />
-                              Tornar Admin
-                            </>
-                          )}
-                        </Button>
-                      </td>
-                    </tr>
-                  ))
+                        </td>
+                        <td className="px-4 py-3">
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => openRoleDialog(u)}
+                            className="border-purple-500/30 text-purple-400 hover:bg-purple-500/10"
+                          >
+                            <UserCog className="h-4 w-4 mr-1" />
+                            Gerenciar
+                          </Button>
+                        </td>
+                      </tr>
+                    );
+                  })
                 )}
               </tbody>
             </table>
@@ -408,6 +481,94 @@ const AdminUsers = () => {
           )}
         </div>
       </main>
+
+      {/* Role Management Dialog */}
+      <Dialog open={isRoleDialogOpen} onOpenChange={setIsRoleDialogOpen}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-full bg-gradient-to-r from-purple-500 to-fuchsia-500 flex items-center justify-center text-white font-medium overflow-hidden">
+                {selectedUser?.avatar_url ? (
+                  <img src={selectedUser.avatar_url} alt="" className="w-full h-full object-cover" />
+                ) : (
+                  (selectedUser?.full_name?.[0] || 'U').toUpperCase()
+                )}
+              </div>
+              <div>
+                <div>{selectedUser?.full_name || 'Sem nome'}</div>
+                <div className="text-xs text-muted-foreground font-normal">
+                  ID: {selectedUser?.id.slice(0, 8)}...
+                </div>
+              </div>
+            </DialogTitle>
+            <DialogDescription>
+              Gerencie os cargos deste usuário. Um usuário pode ter múltiplos cargos.
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-3 py-4">
+            {(['admin', 'reseller'] as const).map((role) => {
+              const config = ROLE_CONFIG[role];
+              const Icon = config.icon;
+              const hasRole = selectedUser?.roles.includes(role) || false;
+              const isCurrentUser = selectedUser?.id === user?.id;
+              const isDisabled = isCurrentUser && role === 'admin';
+
+              return (
+                <div
+                  key={role}
+                  className={`flex items-center justify-between p-4 rounded-xl border transition-all ${
+                    hasRole 
+                      ? `${config.color} border-current` 
+                      : 'border-border bg-muted/30'
+                  }`}
+                >
+                  <div className="flex items-center gap-3">
+                    <div className={`w-10 h-10 rounded-lg flex items-center justify-center ${
+                      hasRole ? 'bg-current/20' : 'bg-muted'
+                    }`}>
+                      <Icon className={`h-5 w-5 ${hasRole ? '' : 'text-muted-foreground'}`} />
+                    </div>
+                    <div>
+                      <div className="font-medium">{config.label}</div>
+                      <div className="text-xs text-muted-foreground">
+                        {role === 'admin' && 'Acesso total ao painel administrativo'}
+                        {role === 'reseller' && 'Pode revender produtos com desconto'}
+                      </div>
+                    </div>
+                  </div>
+                  <Button
+                    variant={hasRole ? "destructive" : "default"}
+                    size="sm"
+                    onClick={() => selectedUser && toggleRole(selectedUser.id, role, hasRole)}
+                    disabled={updatingRole || isDisabled}
+                    className={!hasRole ? 'bg-purple-500 hover:bg-purple-600' : ''}
+                  >
+                    {updatingRole ? (
+                      <RefreshCw className="h-4 w-4 animate-spin" />
+                    ) : hasRole ? (
+                      <>
+                        <X className="h-4 w-4 mr-1" />
+                        Remover
+                      </>
+                    ) : (
+                      'Adicionar'
+                    )}
+                  </Button>
+                </div>
+              );
+            })}
+          </div>
+
+          <div className="text-xs text-muted-foreground text-center">
+            {selectedUser?.id === user?.id && (
+              <span className="text-amber-400">
+                ⚠️ Você não pode remover sua própria permissão de admin.
+              </span>
+            )}
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };
