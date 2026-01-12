@@ -7,7 +7,6 @@ import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import Header from '@/components/Header';
 import Footer from '@/components/Footer';
-
 interface DeliveredKey {
   id: string;
   keyValue: string;
@@ -15,7 +14,6 @@ interface DeliveredKey {
   variationName: string;
   deliveredAt: string;
 }
-
 interface OrderData {
   id: string;
   orderNsu: string;
@@ -25,25 +23,24 @@ interface OrderData {
   paymentMethod: string;
   receiptUrl?: string;
 }
-
 const PaymentSuccessPage = () => {
   const [searchParams] = useSearchParams();
-  const { toast } = useToast();
+  const {
+    toast
+  } = useToast();
   const [loading, setLoading] = useState(false);
   const [orderData, setOrderData] = useState<OrderData | null>(null);
   const [deliveredKeys, setDeliveredKeys] = useState<DeliveredKey[]>([]);
   const [copiedKey, setCopiedKey] = useState<string | null>(null);
   const [retryCount, setRetryCount] = useState(0);
-  
+
   // Email verification state
   const [emailInput, setEmailInput] = useState('');
   const [emailVerified, setEmailVerified] = useState(false);
   const [verifying, setVerifying] = useState(false);
-
   const orderNsu = searchParams.get('order_nsu');
   const receiptUrl = searchParams.get('receipt_url');
   const captureMethod = searchParams.get('capture_method');
-
   useEffect(() => {
     // Clear any stored cart/payment data
     localStorage.removeItem('current-payment');
@@ -54,26 +51,26 @@ const PaymentSuccessPage = () => {
   // Fetch order keys after email verification
   useEffect(() => {
     if (!emailVerified || !orderNsu || !emailInput) return;
-
     const fetchOrderKeys = async () => {
       setLoading(true);
       try {
-        const { data, error } = await supabase.functions.invoke('get-order-keys', {
-          body: { 
+        const {
+          data,
+          error
+        } = await supabase.functions.invoke('get-order-keys', {
+          body: {
             orderNsu,
             email: emailInput // Include email for server verification
           }
         });
-
         if (error) {
           console.error('Error fetching order keys:', error);
           return;
         }
-
         if (data.success) {
           setOrderData(data.order);
           setDeliveredKeys(data.deliveredKeys || []);
-          
+
           // If no keys yet and order is not delivered, retry in a few seconds
           if (data.deliveredKeys?.length === 0 && data.order?.status !== 'delivered' && retryCount < 10) {
             setTimeout(() => {
@@ -87,10 +84,8 @@ const PaymentSuccessPage = () => {
         setLoading(false);
       }
     };
-
     fetchOrderKeys();
   }, [emailVerified, orderNsu, emailInput, retryCount]);
-
   const handleVerifyEmail = async () => {
     if (!emailInput.trim()) {
       toast({
@@ -100,16 +95,17 @@ const PaymentSuccessPage = () => {
       });
       return;
     }
-
     setVerifying(true);
     try {
-      const { data, error } = await supabase.functions.invoke('get-order-keys', {
-        body: { 
+      const {
+        data,
+        error
+      } = await supabase.functions.invoke('get-order-keys', {
+        body: {
           orderNsu,
           email: emailInput.trim()
         }
       });
-
       if (error) {
         toast({
           title: "Erro de verificação",
@@ -118,14 +114,13 @@ const PaymentSuccessPage = () => {
         });
         return;
       }
-
       if (data.success) {
         setEmailVerified(true);
         setOrderData(data.order);
         setDeliveredKeys(data.deliveredKeys || []);
         toast({
           title: "Email verificado!",
-          description: "Suas chaves estão disponíveis abaixo.",
+          description: "Suas chaves estão disponíveis abaixo."
         });
       } else {
         toast({
@@ -145,14 +140,13 @@ const PaymentSuccessPage = () => {
       setVerifying(false);
     }
   };
-
   const handleCopyKey = async (keyValue: string, keyId: string) => {
     try {
       await navigator.clipboard.writeText(keyValue);
       setCopiedKey(keyId);
       toast({
         title: "Key copiada!",
-        description: "A chave foi copiada para a área de transferência.",
+        description: "A chave foi copiada para a área de transferência."
       });
       setTimeout(() => setCopiedKey(null), 3000);
     } catch {
@@ -163,14 +157,12 @@ const PaymentSuccessPage = () => {
       });
     }
   };
-
   const getPaymentMethodIcon = () => {
     if (captureMethod === 'pix' || orderData?.paymentMethod === 'pix') {
       return <Zap className="h-6 w-6" />;
     }
     return <CreditCard className="h-6 w-6" />;
   };
-
   const getPaymentMethodName = () => {
     const method = captureMethod || orderData?.paymentMethod;
     if (method === 'pix') return 'PIX';
@@ -180,8 +172,7 @@ const PaymentSuccessPage = () => {
 
   // Show email verification form if not verified
   if (!emailVerified) {
-    return (
-      <div className="min-h-screen bg-background">
+    return <div className="min-h-screen bg-background">
         <Header />
         
         <main className="container mx-auto px-4 py-8 pt-24">
@@ -203,40 +194,22 @@ const PaymentSuccessPage = () => {
               <div className="space-y-4">
                 <div className="flex items-center gap-2 bg-muted/30 rounded-xl p-4">
                   <Mail className="h-5 w-5 text-muted-foreground" />
-                  <Input
-                    type="email"
-                    placeholder="Digite seu email"
-                    value={emailInput}
-                    onChange={(e) => setEmailInput(e.target.value)}
-                    onKeyDown={(e) => e.key === 'Enter' && handleVerifyEmail()}
-                    className="border-0 bg-transparent focus-visible:ring-0"
-                  />
+                  <Input type="email" placeholder="Digite seu email" value={emailInput} onChange={e => setEmailInput(e.target.value)} onKeyDown={e => e.key === 'Enter' && handleVerifyEmail()} className="border-0 bg-transparent focus-visible:ring-0" />
                 </div>
 
-                <Button
-                  variant="hero"
-                  className="w-full"
-                  onClick={handleVerifyEmail}
-                  disabled={verifying}
-                >
-                  {verifying ? (
-                    <>
+                <Button variant="hero" className="w-full" onClick={handleVerifyEmail} disabled={verifying}>
+                  {verifying ? <>
                       <Loader2 className="h-4 w-4 mr-2 animate-spin" />
                       Verificando...
-                    </>
-                  ) : (
-                    'Verificar Email'
-                  )}
+                    </> : 'Verificar Email'}
                 </Button>
 
-                {orderNsu && (
-                  <div className="text-sm text-muted-foreground">
+                {orderNsu && <div className="text-sm text-muted-foreground">
                     <span className="flex items-center justify-center gap-2">
                       <Package className="h-4 w-4" />
                       Pedido: <span className="font-mono">{orderNsu}</span>
                     </span>
-                  </div>
-                )}
+                  </div>}
               </div>
 
               {/* Back Home Button */}
@@ -253,12 +226,9 @@ const PaymentSuccessPage = () => {
         </main>
 
         <Footer />
-      </div>
-    );
+      </div>;
   }
-
-  return (
-    <div className="min-h-screen bg-background">
+  return <div className="min-h-screen bg-background">
       <Header />
       
       <main className="container mx-auto px-4 py-8 pt-24">
@@ -279,35 +249,29 @@ const PaymentSuccessPage = () => {
 
             {/* Payment Details */}
             <div className="bg-muted/30 rounded-xl p-6 mb-6 text-left space-y-4">
-              {(captureMethod || orderData?.paymentMethod) && (
-                <div className="flex items-center justify-between">
+              {(captureMethod || orderData?.paymentMethod) && <div className="flex items-center justify-between">
                   <span className="text-muted-foreground flex items-center gap-2">
                     {getPaymentMethodIcon()}
                     Método de Pagamento
                   </span>
                   <span className="font-medium">{getPaymentMethodName()}</span>
-                </div>
-              )}
+                </div>}
               
-              {(orderNsu || orderData?.orderNsu) && (
-                <div className="flex items-center justify-between">
+              {(orderNsu || orderData?.orderNsu) && <div className="flex items-center justify-between">
                   <span className="text-muted-foreground flex items-center gap-2">
                     <Package className="h-5 w-5" />
                     Número do Pedido
                   </span>
                   <span className="font-mono text-sm">{orderNsu || orderData?.orderNsu}</span>
-                </div>
-              )}
+                </div>}
 
-              {orderData?.email && (
-                <div className="flex items-center justify-between">
+              {orderData?.email && <div className="flex items-center justify-between">
                   <span className="text-muted-foreground flex items-center gap-2">
                     <Clock className="h-5 w-5" />
                     Email
                   </span>
                   <span className="text-sm">{orderData.email}</span>
-                </div>
-              )}
+                </div>}
             </div>
 
             {/* Delivered Keys Section */}
@@ -317,18 +281,11 @@ const PaymentSuccessPage = () => {
                 <h3 className="font-semibold text-primary">Suas Chaves de Produto</h3>
               </div>
 
-              {loading ? (
-                <div className="flex items-center justify-center py-8">
+              {loading ? <div className="flex items-center justify-center py-8">
                   <Loader2 className="h-6 w-6 animate-spin text-primary mr-2" />
                   <span className="text-muted-foreground">Carregando suas chaves...</span>
-                </div>
-              ) : deliveredKeys.length > 0 ? (
-                <div className="space-y-3">
-                  {deliveredKeys.map((key) => (
-                    <div 
-                      key={key.id}
-                      className="bg-card border border-border rounded-lg p-4"
-                    >
+                </div> : deliveredKeys.length > 0 ? <div className="space-y-3">
+                  {deliveredKeys.map(key => <div key={key.id} className="bg-card border border-border rounded-lg p-4">
                       <div className="flex items-center justify-between mb-2">
                         <span className="text-sm font-medium">
                           {key.productName} - {key.variationName}
@@ -338,72 +295,42 @@ const PaymentSuccessPage = () => {
                         <code className="flex-1 bg-muted/50 px-3 py-2 rounded-lg font-mono text-sm break-all">
                           {key.keyValue}
                         </code>
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => handleCopyKey(key.keyValue, key.id)}
-                          className="shrink-0"
-                        >
-                          {copiedKey === key.id ? (
-                            <Check className="h-4 w-4 text-green-500" />
-                          ) : (
-                            <Copy className="h-4 w-4" />
-                          )}
+                        <Button variant="outline" size="sm" onClick={() => handleCopyKey(key.keyValue, key.id)} className="shrink-0">
+                          {copiedKey === key.id ? <Check className="h-4 w-4 text-green-500" /> : <Copy className="h-4 w-4" />}
                         </Button>
                       </div>
-                    </div>
-                  ))}
-                </div>
-              ) : retryCount > 0 && retryCount < 10 ? (
-                <div className="flex items-center justify-center py-8">
+                    </div>)}
+                </div> : retryCount > 0 && retryCount < 10 ? <div className="flex items-center justify-center py-8">
                   <Loader2 className="h-6 w-6 animate-spin text-primary mr-2" />
                   <span className="text-muted-foreground">Aguardando entrega das chaves...</span>
-                </div>
-              ) : (
-                <div className="text-center py-6">
+                </div> : <div className="text-center py-6">
                   <p className="text-muted-foreground mb-2">
                     Suas chaves serão exibidas aqui após a confirmação do pagamento.
                   </p>
                   <p className="text-sm text-muted-foreground">
                     Você também receberá por email no endereço cadastrado.
                   </p>
-                </div>
-              )}
+                </div>}
             </div>
 
             {/* Important Info */}
-            <div className="bg-yellow-500/10 border border-yellow-500/30 rounded-xl p-4 mb-6 text-left">
-              <p className="text-sm text-yellow-600 dark:text-yellow-400">
-                <strong>Importante:</strong> Guarde suas chaves em um local seguro. 
-                Elas não poderão ser recuperadas após sair desta página.
-              </p>
-            </div>
+            
 
             {/* Action Buttons */}
             <div className="flex flex-col sm:flex-row gap-3 justify-center">
-              <Button
-                variant="hero"
-                asChild
-                className="gap-2"
-              >
+              <Button variant="hero" asChild className="gap-2">
                 <a href="https://prismcheats.shop/" target="_blank" rel="noopener noreferrer">
                   <ExternalLink className="h-4 w-4" />
                   Tutorial
                 </a>
               </Button>
 
-              {(receiptUrl || orderData?.receiptUrl) && (
-                <Button
-                  variant="outline"
-                  asChild
-                  className="gap-2"
-                >
+              {(receiptUrl || orderData?.receiptUrl) && <Button variant="outline" asChild className="gap-2">
                   <a href={receiptUrl || orderData?.receiptUrl} target="_blank" rel="noopener noreferrer">
                     <Download className="h-4 w-4" />
                     Ver Comprovante
                   </a>
-                </Button>
-              )}
+                </Button>}
               
               <Button variant="outline" asChild className="gap-2">
                 <Link to="/">
@@ -417,8 +344,6 @@ const PaymentSuccessPage = () => {
       </main>
 
       <Footer />
-    </div>
-  );
+    </div>;
 };
-
 export default PaymentSuccessPage;
