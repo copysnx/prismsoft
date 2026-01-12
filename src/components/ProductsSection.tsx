@@ -1,71 +1,11 @@
 import { ShoppingCart, Star } from "lucide-react";
 import { Button } from "@/components/ui/button";
-
-import productPrismAim from "@/assets/product-prism-aim.png";
-import productAimcolor from "@/assets/product-aimcolor.png";
-import productTpmBypass from "@/assets/product-tpm-bypass.png";
-import productSpoofer1Click from "@/assets/product-spoofer-1click.png";
-import productPrismSpoofer from "@/assets/product-prism-spoofer.png";
-
-interface Product {
-  id: number;
-  name: string;
-  price: number;
-  originalPrice?: number;
-  image: string;
-  category: string;
-  rating: number;
-}
-
-const products: Product[] = [
-  {
-    id: 1,
-    name: "Valorant Prism Aim",
-    price: 49.90,
-    originalPrice: 89.90,
-    image: productPrismAim,
-    category: "Valorant",
-    rating: 5,
-  },
-  {
-    id: 2,
-    name: "Valorant AimColor",
-    price: 39.90,
-    originalPrice: 79.90,
-    image: productAimcolor,
-    category: "Valorant",
-    rating: 5,
-  },
-  {
-    id: 3,
-    name: "Valorant TPM Bypass",
-    price: 29.90,
-    originalPrice: 59.90,
-    image: productTpmBypass,
-    category: "Valorant",
-    rating: 5,
-  },
-  {
-    id: 4,
-    name: "Valorant Spoofer 1 Click",
-    price: 34.90,
-    originalPrice: 69.90,
-    image: productSpoofer1Click,
-    category: "Valorant",
-    rating: 5,
-  },
-  {
-    id: 5,
-    name: "Prism Spoofer",
-    price: 44.90,
-    originalPrice: 99.90,
-    image: productPrismSpoofer,
-    category: "Spoofer",
-    rating: 5,
-  },
-];
+import { useNavigate } from "react-router-dom";
+import { products } from "@/data/products";
 
 const ProductsSection = () => {
+  const navigate = useNavigate();
+  
   return (
     <section className="py-16 bg-gradient-to-b from-transparent via-muted/20 to-transparent">
       <div className="container mx-auto px-4">
@@ -83,7 +23,8 @@ const ProductsSection = () => {
           {products.map((product) => (
             <div
               key={product.id}
-              className="group relative overflow-hidden rounded-xl bg-card border border-border card-hover"
+              onClick={() => navigate(`/produto/${product.slug}`)}
+              className="group relative overflow-hidden rounded-xl bg-card border border-border card-hover cursor-pointer"
             >
               {/* Product Image */}
               <div className="relative aspect-square overflow-hidden">
@@ -139,7 +80,15 @@ const ProductsSection = () => {
                 </div>
 
                 {/* Add to Cart Button */}
-                <Button variant="hero" size="sm" className="w-full gap-2">
+                <Button 
+                  variant="hero" 
+                  size="sm" 
+                  className="w-full gap-2"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    navigate(`/produto/${product.slug}`);
+                  }}
+                >
                   <ShoppingCart className="h-4 w-4" />
                   Comprar
                 </Button>
