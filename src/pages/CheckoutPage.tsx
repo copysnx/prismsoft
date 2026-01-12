@@ -207,6 +207,46 @@ const CheckoutPage = () => {
 
       console.log('Order created:', orderData.order);
 
+      // Check if order is free (100% discount)
+      const isFreeOrder = total < 1;
+
+      if (isFreeOrder) {
+        // Free order - mark as paid and deliver keys directly
+        console.log('Free order detected, processing automatic delivery');
+        
+        try {
+          // Update order status to paid
+          const { error: updateError } = await supabase
+            .from('orders')
+            .update({ 
+              status: 'paid',
+              payment_method: 'free',
+              paid_at: new Date().toISOString()
+            })
+            .eq('id', orderData.order.id);
+
+          if (updateError) {
+            console.error('Error updating order status:', updateError);
+          }
+
+          // Store order data and navigate to success page
+          localStorage.setItem('current-order', JSON.stringify({
+            orderId: orderData.order.id,
+            orderNsu: orderNsu,
+            items: items,
+            total: total,
+            createdAt: new Date().toISOString(),
+          }));
+          
+          clearCart();
+          navigate(`/pagamento/sucesso?order_nsu=${encodeURIComponent(orderNsu)}&capture_method=free`);
+        } catch (freeOrderError) {
+          console.error('Error processing free order:', freeOrderError);
+          throw new Error('Erro ao processar pedido gratuito');
+        }
+        return;
+      }
+
       if (paymentMethod === 'pix') {
         // PIX payment via FlowPay API
         const productNames = items.map(item => `${item.productName} (${item.variationName})`).join(', ');
