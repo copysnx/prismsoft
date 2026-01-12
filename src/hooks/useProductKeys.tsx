@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 
 export interface ProductKey {
@@ -18,7 +18,7 @@ export const useProductKeys = (productId?: string, variationId?: string) => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<Error | null>(null);
 
-  const fetchKeys = async () => {
+  const fetchKeys = useCallback(async () => {
     try {
       setLoading(true);
       let query = supabase
@@ -43,11 +43,32 @@ export const useProductKeys = (productId?: string, variationId?: string) => {
     } finally {
       setLoading(false);
     }
-  };
+  }, [productId, variationId]);
 
   useEffect(() => {
     fetchKeys();
-  }, [productId, variationId]);
+
+    // Subscribe to real-time updates for product_keys table
+    const channel = supabase
+      .channel('product-keys-changes')
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'product_keys'
+        },
+        () => {
+          // Refetch keys on any change
+          fetchKeys();
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [fetchKeys]);
 
   const addKeys = async (productId: string, variationId: string, keyValues: string[]) => {
     const { data: userData } = await supabase.auth.getUser();
@@ -67,7 +88,7 @@ export const useProductKeys = (productId?: string, variationId?: string) => {
 
     if (error) throw error;
     
-    await fetchKeys();
+    // Real-time will handle the update
     return data;
   };
 
@@ -79,6 +100,7 @@ export const useProductKeys = (productId?: string, variationId?: string) => {
 
     if (error) throw error;
     
+    // Optimistic update (real-time will sync)
     setKeys(keys.filter(k => k.id !== keyId));
   };
 
@@ -90,6 +112,7 @@ export const useProductKeys = (productId?: string, variationId?: string) => {
 
     if (error) throw error;
     
+    // Optimistic update (real-time will sync)
     setKeys(keys.filter(k => !keyIds.includes(k.id)));
   };
 
@@ -105,6 +128,24 @@ export const useProductKeys = (productId?: string, variationId?: string) => {
     };
   };
 
+  const getProductStock = (productId: string) => {
+    const productKeys = keys.filter(k => k.product_id === productId && k.status === 'available');
+    const stockByVariation: Record<string, number> = {};
+    
+    productKeys.forEach(key => {
+      if (!stockByVariation[key.variation_id]) {
+        stockByVariation[key.variation_id] = 0;
+      }
+      stockByVariation[key.variation_id]++;
+    });
+    
+    return stockByVariation;
+  };
+
+  const getTotalStock = () => {
+    return keys.filter(k => k.status === 'available').length;
+  };
+
   return {
     keys,
     loading,
@@ -113,6 +154,8 @@ export const useProductKeys = (productId?: string, variationId?: string) => {
     deleteKey,
     deleteMultipleKeys,
     getKeyStats,
+    getProductStock,
+    getTotalStock,
     refetch: fetchKeys,
   };
 };
