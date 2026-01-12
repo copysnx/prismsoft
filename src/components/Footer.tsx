@@ -7,7 +7,7 @@ const Footer = () => {
           <div className="md:col-span-2">
             <a href="/" className="flex items-center gap-2 mb-4">
               <img src="/logo.png" alt="Logo" className="h-8 w-8" />
-              <span className="text-lg font-bold"><span className="text-gradient">SysteM</span></span>
+              <span className="text-lg font-bold">Prism <span className="text-gradient">SysteM</span></span>
             </a>
             <p className="text-sm text-muted-foreground max-w-sm">
               Sua loja de produtos digitais de confiança. Compra rápida, segura e 100% digital.
