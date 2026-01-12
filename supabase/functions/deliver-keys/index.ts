@@ -1,14 +1,19 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { z } from "https://deno.land/x/zod@v3.22.4/mod.ts";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
-interface DeliverKeysRequest {
-  orderId: string;
-}
+// =======================================================
+// INPUT VALIDATION SCHEMA
+// =======================================================
+
+const DeliverKeysSchema = z.object({
+  orderId: z.string().uuid({ message: "ID do pedido inválido" }),
+});
 
 interface OrderItem {
   id: string;
@@ -29,18 +34,88 @@ const handler = async (req: Request): Promise<Response> => {
   try {
     const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
     const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
+    const supabaseAnonKey = Deno.env.get('SUPABASE_ANON_KEY')!;
+
+    // =======================================================
+    // SECURITY: REQUIRE ADMIN AUTHENTICATION
+    // =======================================================
     
+    const authHeader = req.headers.get('Authorization');
+    if (!authHeader?.startsWith('Bearer ')) {
+      console.error('No authorization header');
+      return new Response(
+        JSON.stringify({ success: false, error: 'Autenticação obrigatória' }),
+        { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    // Create client with user's auth token to verify identity
+    const userSupabase = createClient(supabaseUrl, supabaseAnonKey, {
+      global: { headers: { Authorization: authHeader } }
+    });
+
+    const token = authHeader.replace('Bearer ', '');
+    const { data: claims, error: claimsError } = await userSupabase.auth.getClaims(token);
+    
+    if (claimsError || !claims?.claims) {
+      console.error('Invalid token:', claimsError);
+      return new Response(
+        JSON.stringify({ success: false, error: 'Token inválido' }),
+        { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    const userId = claims.claims.sub;
+    console.log('Authenticated user:', userId);
+
+    // Use service role client for admin check
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
-    const body: DeliverKeysRequest = await req.json();
-    console.log('Request body:', JSON.stringify(body));
+    // Check if user has admin role
+    const { data: adminRole, error: roleError } = await supabase
+      .from('user_roles')
+      .select('role')
+      .eq('user_id', userId)
+      .eq('role', 'admin')
+      .maybeSingle();
 
-    if (!body.orderId) {
+    if (roleError || !adminRole) {
+      console.error('User is not admin:', userId);
       return new Response(
-        JSON.stringify({ success: false, error: 'Order ID não informado' }),
+        JSON.stringify({ success: false, error: 'Acesso negado. Apenas administradores podem entregar chaves manualmente.' }),
+        { status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    console.log('Admin access verified for user:', userId);
+
+    // =======================================================
+    // INPUT VALIDATION WITH ZOD
+    // =======================================================
+    
+    let rawBody: unknown;
+    try {
+      rawBody = await req.json();
+    } catch {
+      return new Response(
+        JSON.stringify({ success: false, error: 'JSON inválido' }),
         { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
+
+    const parseResult = DeliverKeysSchema.safeParse(rawBody);
+    
+    if (!parseResult.success) {
+      console.error('Validation error:', parseResult.error.issues);
+      const firstError = parseResult.error.issues[0]?.message || 'Dados inválidos';
+      return new Response(
+        JSON.stringify({ success: false, error: firstError }),
+        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    const body = parseResult.data;
+    console.log('Validated request for order:', body.orderId);
 
     // Get order details
     const { data: order, error: orderError } = await supabase
@@ -97,7 +172,7 @@ const handler = async (req: Request): Promise<Response> => {
       );
     }
 
-    console.log('Order items:', JSON.stringify(orderItems));
+    console.log('Order items found:', orderItems.length);
 
     const deliveredKeys: Array<{
       order_item_id: string;
@@ -177,7 +252,7 @@ const handler = async (req: Request): Promise<Response> => {
       .update({ status: 'delivered' })
       .eq('id', body.orderId);
 
-    console.log(`Delivered ${deliveredKeys.length} keys for order ${body.orderId}`);
+    console.log(`Delivered ${deliveredKeys.length} keys for order ${body.orderId} by admin ${userId}`);
 
     return new Response(
       JSON.stringify({ 
@@ -190,9 +265,8 @@ const handler = async (req: Request): Promise<Response> => {
 
   } catch (error: unknown) {
     console.error('Error in deliver-keys function:', error);
-    const errorMessage = error instanceof Error ? error.message : 'Erro interno';
     return new Response(
-      JSON.stringify({ success: false, error: errorMessage }),
+      JSON.stringify({ success: false, error: 'Erro interno' }),
       { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
   }

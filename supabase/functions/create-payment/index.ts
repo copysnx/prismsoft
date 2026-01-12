@@ -1,5 +1,6 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { z } from "https://deno.land/x/zod@v3.22.4/mod.ts";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -8,16 +9,20 @@ const corsHeaders = {
 
 const FLOW_API_URL = 'https://flowapplications.com.br';
 
-interface CreatePaymentRequest {
-  value: number;
-  description?: string;
-  customerName?: string;
-  customerEmail?: string;
-  customerPhone?: string;
-  expiresIn?: number;
-  orderId?: string;
-  orderNsu?: string;
-}
+// =======================================================
+// INPUT VALIDATION SCHEMA
+// =======================================================
+
+const CreatePaymentSchema = z.object({
+  value: z.number().positive({ message: "Valor deve ser positivo" }).max(999999, { message: "Valor máximo excedido" }),
+  description: z.string().max(500, { message: "Descrição muito longa" }).optional(),
+  customerName: z.string().max(200, { message: "Nome muito longo" }).optional(),
+  customerEmail: z.string().email({ message: "Email inválido" }).max(255).optional(),
+  customerPhone: z.string().max(20, { message: "Telefone muito longo" }).optional(),
+  expiresIn: z.number().int().positive().max(86400, { message: "Tempo de expiração inválido" }).optional(), // Max 24 hours
+  orderId: z.string().uuid({ message: "ID do pedido inválido" }).optional(),
+  orderNsu: z.string().max(100).optional(),
+});
 
 interface FlowChargeResponse {
   success: boolean;
@@ -64,15 +69,33 @@ const handler = async (req: Request): Promise<Response> => {
 
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
-    const body: CreatePaymentRequest = await req.json();
-    console.log('Request body:', JSON.stringify(body));
-
-    if (!body.value || body.value <= 0) {
+    // =======================================================
+    // INPUT VALIDATION WITH ZOD
+    // =======================================================
+    
+    let rawBody: unknown;
+    try {
+      rawBody = await req.json();
+    } catch {
       return new Response(
-        JSON.stringify({ success: false, error: 'Valor inválido' }),
+        JSON.stringify({ success: false, error: 'JSON inválido' }),
         { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
+
+    const parseResult = CreatePaymentSchema.safeParse(rawBody);
+    
+    if (!parseResult.success) {
+      console.error('Validation error:', parseResult.error.issues);
+      const firstError = parseResult.error.issues[0]?.message || 'Dados inválidos';
+      return new Response(
+        JSON.stringify({ success: false, error: firstError }),
+        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    const body = parseResult.data;
+    console.log('Validated payment request, value:', body.value);
 
     // Prepare payment data
     const paymentData: Record<string, unknown> = {
@@ -95,7 +118,7 @@ const handler = async (req: Request): Promise<Response> => {
       };
     }
 
-    console.log('Sending request to Flow API:', JSON.stringify(paymentData));
+    console.log('Sending request to Flow API');
 
     // Make request to Flow API
     const response = await fetch(`${FLOW_API_URL}/api/flow-api/charge`, {
@@ -108,7 +131,7 @@ const handler = async (req: Request): Promise<Response> => {
     });
 
     const data: FlowChargeResponse = await response.json();
-    console.log('Flow API response:', JSON.stringify(data));
+    console.log('Flow API response status:', response.status);
 
     if (!response.ok) {
       console.error('Flow API error:', data.error);
@@ -161,9 +184,8 @@ const handler = async (req: Request): Promise<Response> => {
 
   } catch (error: unknown) {
     console.error('Error in create-payment function:', error);
-    const errorMessage = error instanceof Error ? error.message : 'Erro interno';
     return new Response(
-      JSON.stringify({ success: false, error: errorMessage }),
+      JSON.stringify({ success: false, error: 'Erro interno' }),
       { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
   }

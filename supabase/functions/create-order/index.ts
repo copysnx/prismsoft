@@ -1,43 +1,45 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { z } from "https://deno.land/x/zod@v3.22.4/mod.ts";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
-interface CartItem {
-  productId: string;
-  productName: string;
-  productImage: string;
-  variationId: string;
-  variationName: string;
-  price: number;
-  quantity: number;
-}
+// =======================================================
+// INPUT VALIDATION SCHEMAS
+// =======================================================
 
-interface CreateOrderRequest {
-  items: CartItem[];
-  email: string;
-  customerName?: string;
-  phone?: string;
-  paymentMethod: 'pix' | 'card';
-  paymentId?: string;
-  orderNsu?: string;
-  totalAmount: number;
-  discountAmount?: number;
-  couponCode?: string;
-  userId?: string;
-}
+const CartItemSchema = z.object({
+  productId: z.string().uuid({ message: "ID do produto inválido" }),
+  productName: z.string().min(1).max(200, { message: "Nome do produto muito longo" }),
+  productImage: z.string().max(500).optional(),
+  variationId: z.string().min(1).max(100, { message: "ID da variação inválido" }),
+  variationName: z.string().min(1).max(200, { message: "Nome da variação muito longo" }),
+  price: z.number().positive().max(999999, { message: "Preço inválido" }),
+  quantity: z.number().int().positive().max(100, { message: "Quantidade inválida" }),
+});
+
+const CreateOrderSchema = z.object({
+  items: z.array(CartItemSchema).min(1, { message: "Carrinho vazio" }).max(50, { message: "Muitos itens no carrinho" }),
+  email: z.string().email({ message: "Email inválido" }).max(255),
+  customerName: z.string().min(1).max(200).optional(),
+  phone: z.string().max(20).optional(),
+  paymentMethod: z.enum(['pix', 'card']),
+  paymentId: z.string().max(100).optional(),
+  orderNsu: z.string().max(100).optional(),
+  totalAmount: z.number().positive().max(999999, { message: "Valor total inválido" }),
+  discountAmount: z.number().min(0).max(999999).optional(),
+  couponCode: z.string().max(50).optional(),
+  userId: z.string().uuid().optional().nullable(),
+});
 
 interface ProductVariation {
   id: string;
   name: string;
   price: number;
 }
-
-const isUuid = (value: string) =>
-  /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(value);
 
 const handler = async (req: Request): Promise<Response> => {
   console.log('Create order request received');
@@ -52,43 +54,39 @@ const handler = async (req: Request): Promise<Response> => {
     
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
-    const body: CreateOrderRequest = await req.json();
-    console.log('Request body:', JSON.stringify(body));
-
-    if (!body.items || body.items.length === 0) {
-      return new Response(
-        JSON.stringify({ success: false, error: 'Carrinho vazio' }),
-        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
-    }
-
-    if (!body.email) {
-      return new Response(
-        JSON.stringify({ success: false, error: 'Email obrigatório' }),
-        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
-    }
-
     // =======================================================
-    // SERVER-SIDE PRICE VALIDATION - SECURITY FIX
+    // INPUT VALIDATION WITH ZOD
     // =======================================================
     
-    // Fetch all products to validate prices from database
+    let rawBody: unknown;
+    try {
+      rawBody = await req.json();
+    } catch {
+      return new Response(
+        JSON.stringify({ success: false, error: 'JSON inválido' }),
+        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    const parseResult = CreateOrderSchema.safeParse(rawBody);
+    
+    if (!parseResult.success) {
+      console.error('Validation error:', parseResult.error.issues);
+      const firstError = parseResult.error.issues[0]?.message || 'Dados inválidos';
+      return new Response(
+        JSON.stringify({ success: false, error: firstError }),
+        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    const body = parseResult.data;
+    console.log('Validated request for:', body.email);
+
+    // =======================================================
+    // SERVER-SIDE PRICE VALIDATION
+    // =======================================================
+    
     const productIds = [...new Set(body.items.map(i => i.productId))];
-    
-    for (const productId of productIds) {
-      if (!isUuid(productId)) {
-        console.error('Invalid productId received:', productId);
-        return new Response(
-          JSON.stringify({
-            success: false,
-            error: 'Produto inválido no carrinho. Remova e adicione novamente.',
-            invalidProductId: productId,
-          }),
-          { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-        );
-      }
-    }
 
     const { data: products, error: productsError } = await supabase
       .from('products')
@@ -118,7 +116,15 @@ const handler = async (req: Request): Promise<Response> => {
 
     // Calculate server-side subtotal and validate each item price
     let calculatedSubtotal = 0;
-    const validatedItems: CartItem[] = [];
+    const validatedItems: Array<{
+      productId: string;
+      productName: string;
+      productImage?: string;
+      variationId: string;
+      variationName: string;
+      price: number;
+      quantity: number;
+    }> = [];
 
     for (const item of body.items) {
       const productVariations = productVariationsMap.get(item.productId);
@@ -369,9 +375,8 @@ const handler = async (req: Request): Promise<Response> => {
 
   } catch (error: unknown) {
     console.error('Error in create-order function:', error);
-    const errorMessage = error instanceof Error ? error.message : 'Erro interno';
     return new Response(
-      JSON.stringify({ success: false, error: errorMessage }),
+      JSON.stringify({ success: false, error: 'Erro interno' }),
       { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
   }
