@@ -111,9 +111,8 @@ export const products: Product[] = [
     ],
     variations: [
       { id: "diario", name: "Diário", price: 19.90, originalPrice: 34.90, stock: 100 },
-      { id: "7-dias", name: "7 Dias", price: 49.90, originalPrice: 69.90, stock: 50 },
-      { id: "30-dias", name: "30 Dias", price: 79.90, originalPrice: 99.90, stock: 50 },
-      { id: "lifetime", name: "Lifetime", price: 149.90, originalPrice: 199.90, stock: 20 },
+      { id: "7-dias", name: "7 Dias", price: 59.90, originalPrice: 79.90, stock: 50 },
+      { id: "30-dias", name: "30 Dias", price: 109.90, originalPrice: 149.90, stock: 50 },
     ]
   },
   {
