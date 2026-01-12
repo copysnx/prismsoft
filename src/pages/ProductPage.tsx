@@ -6,6 +6,7 @@ import Header from "@/components/Header";
 import Footer from "@/components/Footer";
 import { useCart } from "@/hooks/useCart";
 import { useToast } from "@/hooks/use-toast";
+import { useAuth } from "@/hooks/useAuth";
 import { useRealTimeStock } from "@/hooks/useRealTimeStock";
 import { supabase } from "@/integrations/supabase/client";
 
@@ -36,6 +37,7 @@ const ProductPage = () => {
   const [searchParams, setSearchParams] = useSearchParams();
   const { addItem } = useCart();
   const { toast } = useToast();
+  const { user } = useAuth();
   
   const [product, setProduct] = useState<Product | null>(null);
   const [loading, setLoading] = useState(true);
@@ -102,6 +104,16 @@ const ProductPage = () => {
   const handleAddToCart = () => {
     if (!product || !selectedVariation) return;
     
+    if (!user) {
+      toast({
+        title: "Crie uma conta para comprar",
+        description: "Você precisa estar logado para adicionar produtos ao carrinho.",
+        variant: "destructive",
+      });
+      navigate('/auth');
+      return;
+    }
+    
     addItem({
       productId: product.id,
       productSlug: product.slug,
@@ -121,6 +133,16 @@ const ProductPage = () => {
 
   const handleBuyNow = () => {
     if (!product || !selectedVariation) return;
+
+    if (!user) {
+      toast({
+        title: "Crie uma conta para comprar",
+        description: "Você precisa estar logado para realizar compras.",
+        variant: "destructive",
+      });
+      navigate('/auth');
+      return;
+    }
 
     handleAddToCart();
     navigate('/checkout');
