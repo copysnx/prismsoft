@@ -38,8 +38,8 @@ const App = () => (
               <Route path="/reset-password" element={<ResetPasswordPage />} />
               <Route path="/profile" element={<ProfilePage />} />
               <Route path="/checkout" element={<CheckoutPage />} />
-              <Route path="/pagamento" element={<PaymentPage />} />
               <Route path="/pagamento/sucesso" element={<PaymentSuccessPage />} />
+              <Route path="/pagamento" element={<PaymentPage />} />
               <Route path="/termos" element={<TermsPage />} />
               <Route path="/admin" element={<AdminDashboard />} />
               <Route path="/admin/products" element={<AdminProducts />} />
