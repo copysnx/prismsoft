@@ -518,7 +518,7 @@ const PurchasesPage = () => {
                     <Button
                       variant="outline"
                       className="border-purple-500/30 hover:bg-purple-500/10 hover:border-purple-500/50 shrink-0"
-                      onClick={() => window.open("https://prismcheats.shop/", "_blank")}
+                      onClick={() => window.open("https://discord.gg/HEKCFhaXwF", "_blank")}
                     >
                       <MessageCircle className="h-4 w-4 mr-2" />
                       Suporte
