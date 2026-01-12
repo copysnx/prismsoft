@@ -38,6 +38,28 @@ const handler = async (req: Request): Promise<Response> => {
     const payload: WebhookPayload = await req.json();
     console.log('Webhook payload:', JSON.stringify(payload));
 
+    // =======================================================
+    // SECURITY VALIDATIONS
+    // =======================================================
+    
+    // Validate required fields are present
+    if (!payload.order_nsu || !payload.transaction_nsu) {
+      console.error('Missing required fields in webhook payload');
+      return new Response(
+        JSON.stringify({ success: false, error: 'Payload inválido' }),
+        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    // Validate amount is positive
+    if (!payload.paid_amount || payload.paid_amount <= 0) {
+      console.error('Invalid payment amount:', payload.paid_amount);
+      return new Response(
+        JSON.stringify({ success: false, error: 'Valor de pagamento inválido' }),
+        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
     console.log(`Payment confirmed for order ${payload.order_nsu}`);
     console.log(`Amount: ${payload.paid_amount / 100} BRL`);
     console.log(`Method: ${payload.capture_method}`);
@@ -60,6 +82,46 @@ const handler = async (req: Request): Promise<Response> => {
     }
 
     console.log('Order found:', order.id);
+
+    // =======================================================
+    // SECURITY: Validate payment amount matches order
+    // =======================================================
+    
+    const orderTotalInCents = Math.round(order.total_amount * 100);
+    const paidAmountDifference = Math.abs(orderTotalInCents - payload.paid_amount);
+    
+    // Allow 1 cent difference for rounding
+    if (paidAmountDifference > 1) {
+      console.error('Payment amount mismatch!', {
+        orderTotal: orderTotalInCents,
+        paidAmount: payload.paid_amount,
+        difference: paidAmountDifference
+      });
+      return new Response(
+        JSON.stringify({ 
+          success: false, 
+          error: 'Valor do pagamento não corresponde ao pedido' 
+        }),
+        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    // =======================================================
+    // SECURITY: Check if order was already processed
+    // =======================================================
+    
+    if (order.status === 'paid' || order.status === 'delivered') {
+      console.log('Order already processed:', order.id, order.status);
+      return new Response(
+        JSON.stringify({ 
+          success: true, 
+          message: 'Pedido já foi processado anteriormente',
+          orderId: order.id,
+          status: order.status
+        }),
+        { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
 
     // Update order status to paid
     const { error: updateError } = await supabase

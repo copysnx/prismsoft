@@ -30,6 +30,12 @@ interface CreateOrderRequest {
   userId?: string;
 }
 
+interface ProductVariation {
+  id: string;
+  name: string;
+  price: number;
+}
+
 const isUuid = (value: string) =>
   /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(value);
 
@@ -63,20 +69,198 @@ const handler = async (req: Request): Promise<Response> => {
       );
     }
 
-    // Check stock availability for all items
-    for (const item of body.items) {
-      if (!isUuid(item.productId)) {
-        console.error('Invalid productId received:', item.productId);
+    // =======================================================
+    // SERVER-SIDE PRICE VALIDATION - SECURITY FIX
+    // =======================================================
+    
+    // Fetch all products to validate prices from database
+    const productIds = [...new Set(body.items.map(i => i.productId))];
+    
+    for (const productId of productIds) {
+      if (!isUuid(productId)) {
+        console.error('Invalid productId received:', productId);
         return new Response(
           JSON.stringify({
             success: false,
             error: 'Produto inválido no carrinho. Remova e adicione novamente.',
-            invalidProductId: item.productId,
+            invalidProductId: productId,
+          }),
+          { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+    }
+
+    const { data: products, error: productsError } = await supabase
+      .from('products')
+      .select('id, variations')
+      .in('id', productIds);
+
+    if (productsError) {
+      console.error('Error fetching products:', productsError);
+      return new Response(
+        JSON.stringify({ success: false, error: 'Erro ao validar produtos' }),
+        { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    // Build a map of product variations for quick lookup
+    const productVariationsMap = new Map<string, Map<string, number>>();
+    for (const product of products || []) {
+      const variationsMap = new Map<string, number>();
+      const variations = product.variations as ProductVariation[];
+      if (Array.isArray(variations)) {
+        for (const variation of variations) {
+          variationsMap.set(variation.id, variation.price);
+        }
+      }
+      productVariationsMap.set(product.id, variationsMap);
+    }
+
+    // Calculate server-side subtotal and validate each item price
+    let calculatedSubtotal = 0;
+    const validatedItems: CartItem[] = [];
+
+    for (const item of body.items) {
+      const productVariations = productVariationsMap.get(item.productId);
+      
+      if (!productVariations) {
+        console.error('Product not found:', item.productId);
+        return new Response(
+          JSON.stringify({ 
+            success: false, 
+            error: `Produto "${item.productName}" não encontrado` 
           }),
           { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
         );
       }
 
+      const databasePrice = productVariations.get(item.variationId);
+      
+      if (databasePrice === undefined) {
+        console.error('Variation not found:', item.variationId);
+        return new Response(
+          JSON.stringify({ 
+            success: false, 
+            error: `Variação "${item.variationName}" não encontrada` 
+          }),
+          { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+
+      // Use DATABASE price, not client-provided price
+      calculatedSubtotal += databasePrice * item.quantity;
+      
+      // Store validated item with database price
+      validatedItems.push({
+        ...item,
+        price: databasePrice // Override with database price
+      });
+    }
+
+    console.log('Calculated subtotal from database:', calculatedSubtotal);
+
+    // =======================================================
+    // SERVER-SIDE COUPON VALIDATION
+    // =======================================================
+    
+    let calculatedDiscount = 0;
+    let validatedCouponCode: string | null = null;
+
+    if (body.couponCode) {
+      const { data: coupon, error: couponError } = await supabase
+        .from('coupons')
+        .select('*')
+        .eq('code', body.couponCode.toUpperCase())
+        .eq('is_active', true)
+        .single();
+
+      if (couponError || !coupon) {
+        console.error('Invalid coupon:', body.couponCode);
+        return new Response(
+          JSON.stringify({ success: false, error: 'Cupom inválido ou expirado' }),
+          { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+
+      const now = new Date();
+
+      // Validate coupon dates
+      if (coupon.valid_from && new Date(coupon.valid_from) > now) {
+        return new Response(
+          JSON.stringify({ success: false, error: 'Cupom ainda não está válido' }),
+          { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+
+      if (coupon.valid_until && new Date(coupon.valid_until) < now) {
+        return new Response(
+          JSON.stringify({ success: false, error: 'Cupom expirado' }),
+          { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+
+      // Check usage limit
+      if (coupon.max_uses && (coupon.current_uses || 0) >= coupon.max_uses) {
+        return new Response(
+          JSON.stringify({ success: false, error: 'Limite de uso do cupom atingido' }),
+          { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+
+      // Check minimum purchase
+      if (coupon.min_purchase && calculatedSubtotal < coupon.min_purchase) {
+        return new Response(
+          JSON.stringify({ 
+            success: false, 
+            error: `Compra mínima de R$ ${coupon.min_purchase.toFixed(2)} necessária` 
+          }),
+          { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+
+      // Calculate discount based on type
+      if (coupon.discount_type === 'percentage') {
+        calculatedDiscount = calculatedSubtotal * (coupon.discount_value / 100);
+      } else {
+        calculatedDiscount = Math.min(coupon.discount_value, calculatedSubtotal);
+      }
+
+      validatedCouponCode = coupon.code;
+
+      // Increment coupon usage
+      await supabase
+        .from('coupons')
+        .update({ current_uses: (coupon.current_uses || 0) + 1 })
+        .eq('id', coupon.id);
+
+      console.log('Coupon validated:', coupon.code, 'Discount:', calculatedDiscount);
+    }
+
+    // Calculate final total using server-side values
+    const calculatedTotal = Math.max(0, calculatedSubtotal - calculatedDiscount);
+    
+    console.log('Server calculated total:', calculatedTotal);
+    console.log('Client provided total:', body.totalAmount);
+
+    // Verify client calculation matches server (allow small floating point differences)
+    const priceDifference = Math.abs(calculatedTotal - body.totalAmount);
+    if (priceDifference > 0.01) {
+      console.error('Price mismatch detected! Server:', calculatedTotal, 'Client:', body.totalAmount);
+      return new Response(
+        JSON.stringify({ 
+          success: false, 
+          error: 'Erro de validação de preço. Por favor, atualize seu carrinho.',
+          expectedTotal: calculatedTotal
+        }),
+        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    // =======================================================
+    // CHECK STOCK AVAILABILITY
+    // =======================================================
+    
+    for (const item of validatedItems) {
       const { data: availableKeys, error } = await supabase
         .from('product_keys')
         .select('id')
@@ -109,7 +293,10 @@ const handler = async (req: Request): Promise<Response> => {
       }
     }
 
-    // Create order
+    // =======================================================
+    // CREATE ORDER WITH SERVER-VALIDATED VALUES
+    // =======================================================
+    
     const orderData = {
       email: body.email,
       customer_name: body.customerName || null,
@@ -118,9 +305,9 @@ const handler = async (req: Request): Promise<Response> => {
       payment_method: body.paymentMethod,
       payment_id: body.paymentId || null,
       order_nsu: body.orderNsu || `ORDER-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
-      total_amount: body.totalAmount,
-      discount_amount: body.discountAmount || 0,
-      coupon_code: body.couponCode || null,
+      total_amount: calculatedTotal, // Use SERVER-CALCULATED total
+      discount_amount: calculatedDiscount, // Use SERVER-CALCULATED discount
+      coupon_code: validatedCouponCode,
       user_id: body.userId || null,
     };
 
@@ -140,15 +327,15 @@ const handler = async (req: Request): Promise<Response> => {
 
     console.log('Order created:', order.id);
 
-    // Create order items
-    const orderItems = body.items.map(item => ({
+    // Create order items with validated prices
+    const orderItems = validatedItems.map(item => ({
       order_id: order.id,
       product_id: item.productId,
       product_name: item.productName,
       variation_id: item.variationId,
       variation_name: item.variationName,
       quantity: item.quantity,
-      price: item.price,
+      price: item.price, // This is now the DATABASE price
     }));
 
     const { error: itemsError } = await supabase
