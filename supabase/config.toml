@@ -11,3 +11,12 @@ verify_jwt = false
 
 [functions.infinitepay-webhook]
 verify_jwt = false
+
+[functions.deliver-keys]
+verify_jwt = false
+
+[functions.create-order]
+verify_jwt = false
+
+[functions.get-order-keys]
+verify_jwt = false

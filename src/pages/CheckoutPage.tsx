@@ -79,6 +79,52 @@ const CheckoutPage = () => {
     setIsProcessing(true);
     
     try {
+      const orderNsu = `ORDER-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+      
+      // Create order first to check stock and reserve
+      const cartItems = items.map(item => ({
+        productId: item.productId,
+        productName: item.productName,
+        productImage: item.productImage,
+        variationId: item.variationId,
+        variationName: item.variationName,
+        price: item.price,
+        quantity: item.quantity,
+      }));
+
+      const { data: orderData, error: orderError } = await supabase.functions.invoke('create-order', {
+        body: {
+          items: cartItems,
+          email: contactInfo.email,
+          customerName: `${contactInfo.firstName} ${contactInfo.lastName}`.trim() || undefined,
+          phone: contactInfo.phone || undefined,
+          paymentMethod: paymentMethod,
+          orderNsu: orderNsu,
+          totalAmount: total,
+          discountAmount: discount,
+          couponCode: couponCode || undefined,
+          userId: user?.id || undefined,
+        }
+      });
+
+      if (orderError) {
+        throw new Error(orderError.message || 'Erro ao criar pedido');
+      }
+
+      if (!orderData.success) {
+        if (orderData.stockError) {
+          toast({
+            title: "Estoque insuficiente",
+            description: orderData.error,
+            variant: "destructive"
+          });
+          return;
+        }
+        throw new Error(orderData.error || 'Erro ao criar pedido');
+      }
+
+      console.log('Order created:', orderData.order);
+
       if (paymentMethod === 'pix') {
         // PIX payment via FlowPay API
         const productNames = items.map(item => `${item.productName} (${item.variationName})`).join(', ');
@@ -91,6 +137,8 @@ const CheckoutPage = () => {
             customerEmail: contactInfo.email,
             customerPhone: contactInfo.phone,
             expiresIn: 3600, // 1 hour
+            orderId: orderData.order.id,
+            orderNsu: orderNsu,
           }
         });
 
@@ -100,7 +148,11 @@ const CheckoutPage = () => {
 
         if (data.success && data.payment) {
           // Store payment data and navigate to payment page
-          localStorage.setItem('current-payment', JSON.stringify(data.payment));
+          localStorage.setItem('current-payment', JSON.stringify({
+            ...data.payment,
+            orderId: orderData.order.id,
+            orderNsu: orderNsu,
+          }));
           clearCart();
           navigate('/pagamento');
         } else {
@@ -108,11 +160,10 @@ const CheckoutPage = () => {
         }
       } else {
         // Card payment via InfinitePay
-        const orderNsu = `ORDER-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
-        const redirectUrl = `${window.location.origin}/pagamento/sucesso`;
+        const redirectUrl = `${window.location.origin}/pagamento/sucesso?order_nsu=${encodeURIComponent(orderNsu)}`;
         const webhookUrl = `https://ysbybtrbfxjfjpybmlob.supabase.co/functions/v1/infinitepay-webhook`;
 
-        const cartItems = items.map(item => ({
+        const checkoutItems = items.map(item => ({
           productName: item.productName,
           variationName: item.variationName,
           price: item.price,
@@ -125,7 +176,7 @@ const CheckoutPage = () => {
 
         const { data, error } = await supabase.functions.invoke('infinitepay-checkout', {
           body: {
-            items: cartItems,
+            items: checkoutItems,
             orderNsu: orderNsu,
             redirectUrl: redirectUrl,
             webhookUrl: webhookUrl,
@@ -145,6 +196,7 @@ const CheckoutPage = () => {
 
         if (data.success && data.checkoutUrl) {
           localStorage.setItem('current-order', JSON.stringify({
+            orderId: orderData.order.id,
             orderNsu: orderNsu,
             items: items,
             total: total,
@@ -156,6 +208,7 @@ const CheckoutPage = () => {
           const checkoutUrl = data.data.url || data.data.checkout_url || data.data.link;
           if (checkoutUrl) {
             localStorage.setItem('current-order', JSON.stringify({
+              orderId: orderData.order.id,
               orderNsu: orderNsu,
               items: items,
               total: total,

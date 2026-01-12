@@ -62,6 +62,159 @@ export type Database = {
         }
         Relationships: []
       }
+      delivered_keys: {
+        Row: {
+          delivered_at: string
+          id: string
+          key_value: string
+          order_id: string
+          order_item_id: string
+          product_key_id: string
+        }
+        Insert: {
+          delivered_at?: string
+          id?: string
+          key_value: string
+          order_id: string
+          order_item_id: string
+          product_key_id: string
+        }
+        Update: {
+          delivered_at?: string
+          id?: string
+          key_value?: string
+          order_id?: string
+          order_item_id?: string
+          product_key_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "delivered_keys_order_id_fkey"
+            columns: ["order_id"]
+            isOneToOne: false
+            referencedRelation: "orders"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "delivered_keys_order_item_id_fkey"
+            columns: ["order_item_id"]
+            isOneToOne: false
+            referencedRelation: "order_items"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "delivered_keys_product_key_id_fkey"
+            columns: ["product_key_id"]
+            isOneToOne: false
+            referencedRelation: "product_keys"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      order_items: {
+        Row: {
+          created_at: string
+          id: string
+          order_id: string
+          price: number
+          product_id: string
+          product_name: string
+          quantity: number
+          variation_id: string
+          variation_name: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          order_id: string
+          price: number
+          product_id: string
+          product_name: string
+          quantity?: number
+          variation_id: string
+          variation_name: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          order_id?: string
+          price?: number
+          product_id?: string
+          product_name?: string
+          quantity?: number
+          variation_id?: string
+          variation_name?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "order_items_order_id_fkey"
+            columns: ["order_id"]
+            isOneToOne: false
+            referencedRelation: "orders"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      orders: {
+        Row: {
+          coupon_code: string | null
+          created_at: string
+          customer_name: string | null
+          discount_amount: number | null
+          email: string
+          id: string
+          order_nsu: string | null
+          paid_at: string | null
+          payment_id: string | null
+          payment_method: string | null
+          phone: string | null
+          receipt_url: string | null
+          status: string
+          total_amount: number
+          transaction_nsu: string | null
+          updated_at: string
+          user_id: string | null
+        }
+        Insert: {
+          coupon_code?: string | null
+          created_at?: string
+          customer_name?: string | null
+          discount_amount?: number | null
+          email: string
+          id?: string
+          order_nsu?: string | null
+          paid_at?: string | null
+          payment_id?: string | null
+          payment_method?: string | null
+          phone?: string | null
+          receipt_url?: string | null
+          status?: string
+          total_amount: number
+          transaction_nsu?: string | null
+          updated_at?: string
+          user_id?: string | null
+        }
+        Update: {
+          coupon_code?: string | null
+          created_at?: string
+          customer_name?: string | null
+          discount_amount?: number | null
+          email?: string
+          id?: string
+          order_nsu?: string | null
+          paid_at?: string | null
+          payment_id?: string | null
+          payment_method?: string | null
+          phone?: string | null
+          receipt_url?: string | null
+          status?: string
+          total_amount?: number
+          transaction_nsu?: string | null
+          updated_at?: string
+          user_id?: string | null
+        }
+        Relationships: []
+      }
       product_keys: {
         Row: {
           created_at: string
