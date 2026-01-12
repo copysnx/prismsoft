@@ -7,7 +7,6 @@ import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import Header from '@/components/Header';
 import Footer from '@/components/Footer';
-import CelebrationVideo from '@/components/CelebrationVideo';
 interface DeliveredKey {
   id: string;
   keyValue: string;
@@ -34,7 +33,6 @@ const PaymentSuccessPage = () => {
   const [deliveredKeys, setDeliveredKeys] = useState<DeliveredKey[]>([]);
   const [copiedKey, setCopiedKey] = useState<string | null>(null);
   const [retryCount, setRetryCount] = useState(0);
-  const [showCelebration, setShowCelebration] = useState(false);
 
   // Email verification state
   const [emailInput, setEmailInput] = useState('');
@@ -120,7 +118,6 @@ const PaymentSuccessPage = () => {
         setEmailVerified(true);
         setOrderData(data.order);
         setDeliveredKeys(data.deliveredKeys || []);
-        setShowCelebration(true); // Trigger celebration video
         toast({
           title: "Email verificado!",
           description: "Suas chaves estão disponíveis abaixo."
@@ -232,7 +229,6 @@ const PaymentSuccessPage = () => {
       </div>;
   }
   return <div className="min-h-screen bg-background">
-      <CelebrationVideo show={showCelebration} duration={10000} />
       <Header />
       
       <main className="container mx-auto px-4 py-8 pt-24">
