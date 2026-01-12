@@ -13,37 +13,25 @@ export const useRealTimeStock = (productId?: string) => {
 
   const fetchStock = async () => {
     try {
-      let query = supabase
-        .from('product_keys')
-        .select('product_id, variation_id')
-        .eq('status', 'available');
-
-      if (productId) {
-        query = query.eq('product_id', productId);
-      }
-
-      const { data, error } = await query;
+      // Query the secure view that only exposes stock counts, not actual key values
+      const { data, error } = await supabase
+        .from('product_stock_view' as any)
+        .select('product_id, variation_id, available_count');
 
       if (error) throw error;
 
-      // Group by product_id and variation_id and count
-      const stockMap = new Map<string, StockInfo>();
-      
-      (data || []).forEach(key => {
-        const mapKey = `${key.product_id}-${key.variation_id}`;
-        const existing = stockMap.get(mapKey);
-        if (existing) {
-          existing.available++;
-        } else {
-          stockMap.set(mapKey, {
-            productId: key.product_id,
-            variationId: key.variation_id,
-            available: 1
-          });
-        }
-      });
+      // Filter by productId if provided, then map to StockInfo format
+      const filteredData = productId 
+        ? (data || []).filter((item: any) => item.product_id === productId)
+        : (data || []);
 
-      setStockData(Array.from(stockMap.values()));
+      const stockList: StockInfo[] = filteredData.map((item: any) => ({
+        productId: item.product_id,
+        variationId: item.variation_id,
+        available: Number(item.available_count)
+      }));
+
+      setStockData(stockList);
     } catch (error) {
       console.error('Error fetching stock:', error);
     } finally {
@@ -55,7 +43,8 @@ export const useRealTimeStock = (productId?: string) => {
     // Always fetch when productId changes (including from undefined to a value)
     fetchStock();
 
-    // Subscribe to real-time updates
+    // Subscribe to real-time updates on product_keys table
+    // When keys are added/sold, refetch from the secure view
     const channel = supabase
       .channel(`stock-updates-${productId || 'all'}`)
       .on(
@@ -67,7 +56,7 @@ export const useRealTimeStock = (productId?: string) => {
           ...(productId ? { filter: `product_id=eq.${productId}` } : {})
         },
         () => {
-          // Refetch stock on any change
+          // Refetch stock counts on any change
           fetchStock();
         }
       )
