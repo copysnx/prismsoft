@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
-import { ArrowLeft, Plus, Pencil, Trash2, Tag, Percent, DollarSign, Calendar, Users } from 'lucide-react';
+import { ArrowLeft, Plus, Pencil, Trash2, Tag, Percent, DollarSign, Calendar, Users, Shield } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -10,8 +10,14 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
 import { useAdmin } from '@/hooks/useAdmin';
-import { useCoupons, Coupon } from '@/hooks/useCoupons';
+import { useCoupons, Coupon, AppRole } from '@/hooks/useCoupons';
 import Header from '@/components/Header';
+
+const roleLabels: Record<AppRole, string> = {
+  admin: 'Administradores',
+  reseller: 'Revendedores',
+  user: 'Usuários',
+};
 
 const AdminCoupons = () => {
   const { isAdmin, loading: isAdminLoading } = useAdmin();
@@ -29,6 +35,7 @@ const AdminCoupons = () => {
     valid_from: '',
     valid_until: '',
     is_active: true,
+    restricted_to_role: '' as AppRole | '',
   });
 
   if (isAdminLoading) {
@@ -64,6 +71,7 @@ const AdminCoupons = () => {
       valid_from: '',
       valid_until: '',
       is_active: true,
+      restricted_to_role: '',
     });
     setEditingCoupon(null);
   };
@@ -81,6 +89,7 @@ const AdminCoupons = () => {
         valid_from: coupon.valid_from ? coupon.valid_from.slice(0, 16) : '',
         valid_until: coupon.valid_until ? coupon.valid_until.slice(0, 16) : '',
         is_active: coupon.is_active,
+        restricted_to_role: coupon.restricted_to_role || '',
       });
     } else {
       resetForm();
@@ -101,6 +110,7 @@ const AdminCoupons = () => {
       valid_from: formData.valid_from || new Date().toISOString(),
       valid_until: formData.valid_until || null,
       is_active: formData.is_active,
+      restricted_to_role: formData.restricted_to_role || null,
     };
 
     if (editingCoupon) {
@@ -274,6 +284,29 @@ const AdminCoupons = () => {
                   </div>
                 </div>
 
+                <div>
+                  <Label>Restrito ao Cargo</Label>
+                  <Select
+                    value={formData.restricted_to_role}
+                    onValueChange={(value: AppRole | 'none') => 
+                      setFormData({ ...formData, restricted_to_role: value === 'none' ? '' : value as AppRole })
+                    }
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Todos os usuários" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="none">Todos os usuários</SelectItem>
+                      <SelectItem value="admin">Administradores</SelectItem>
+                      <SelectItem value="reseller">Revendedores</SelectItem>
+                      <SelectItem value="user">Usuários</SelectItem>
+                    </SelectContent>
+                  </Select>
+                  <p className="text-xs text-muted-foreground mt-1">
+                    Se definido, apenas usuários com este cargo poderão usar o cupom
+                  </p>
+                </div>
+
                 <div className="flex items-center justify-between">
                   <Label htmlFor="is_active">Cupom Ativo</Label>
                   <Switch
@@ -336,6 +369,12 @@ const AdminCoupons = () => {
                       <div className="flex items-center gap-2">
                         <Tag className="h-4 w-4 text-primary" />
                         <span className="font-mono font-semibold">{coupon.code}</span>
+                        {coupon.restricted_to_role && (
+                          <Badge variant="outline" className="text-xs gap-1">
+                            <Shield className="h-3 w-3" />
+                            {roleLabels[coupon.restricted_to_role]}
+                          </Badge>
+                        )}
                       </div>
                       {coupon.description && (
                         <p className="text-xs text-muted-foreground mt-1">{coupon.description}</p>

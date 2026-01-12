@@ -1,5 +1,8 @@
 import { createContext, useContext, useState, ReactNode, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
+import { useAuth } from '@/hooks/useAuth';
+
+type AppRole = 'admin' | 'reseller' | 'user';
 
 export interface CartItem {
   productId: string;
@@ -43,6 +46,7 @@ const CART_STORAGE_KEY = 'prism-cart';
 const COUPON_STORAGE_KEY = 'prism-coupon';
 
 export const CartProvider = ({ children }: { children: ReactNode }) => {
+  const { user } = useAuth();
   const [items, setItems] = useState<CartItem[]>(() => {
     const stored = localStorage.getItem(CART_STORAGE_KEY);
     return stored ? JSON.parse(stored) : [];
@@ -150,6 +154,32 @@ export const CartProvider = ({ children }: { children: ReactNode }) => {
 
       const coupon = data;
       const now = new Date();
+
+      // Check role restriction
+      if (coupon.restricted_to_role) {
+        if (!user?.id) {
+          return { success: false, error: 'Faça login para usar este cupom' };
+        }
+        
+        const { data: userRole } = await supabase
+          .from('user_roles')
+          .select('role')
+          .eq('user_id', user.id)
+          .eq('role', coupon.restricted_to_role)
+          .single();
+        
+        if (!userRole) {
+          const roleNames: Record<AppRole, string> = {
+            'admin': 'administradores',
+            'reseller': 'revendedores',
+            'user': 'usuários'
+          };
+          return { 
+            success: false, 
+            error: `Este cupom é exclusivo para ${roleNames[coupon.restricted_to_role as AppRole]}` 
+          };
+        }
+      }
 
       // Check validity period
       if (coupon.valid_from && new Date(coupon.valid_from) > now) {

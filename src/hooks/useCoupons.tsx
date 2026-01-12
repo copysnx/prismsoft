@@ -2,6 +2,8 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 
+export type AppRole = 'admin' | 'reseller' | 'user';
+
 export interface Coupon {
   id: string;
   code: string;
@@ -16,6 +18,7 @@ export interface Coupon {
   is_active: boolean;
   created_at: string;
   updated_at: string;
+  restricted_to_role: AppRole | null;
 }
 
 export interface CouponValidationResult {
@@ -44,7 +47,7 @@ export const useCoupons = () => {
   });
 
   // Validate a coupon code
-  const validateCoupon = async (code: string, subtotal: number): Promise<CouponValidationResult> => {
+  const validateCoupon = async (code: string, subtotal: number, userId?: string): Promise<CouponValidationResult> => {
     const upperCode = code.toUpperCase().trim();
     
     const { data, error } = await supabase
@@ -60,6 +63,30 @@ export const useCoupons = () => {
 
     const coupon = data as Coupon;
     const now = new Date();
+
+    // Check role restriction
+    if (coupon.restricted_to_role && userId) {
+      const { data: userRole } = await supabase
+        .from('user_roles')
+        .select('role')
+        .eq('user_id', userId)
+        .eq('role', coupon.restricted_to_role)
+        .single();
+      
+      if (!userRole) {
+        const roleNames: Record<AppRole, string> = {
+          'admin': 'administradores',
+          'reseller': 'revendedores',
+          'user': 'usuários'
+        };
+        return { 
+          valid: false, 
+          error: `Este cupom é exclusivo para ${roleNames[coupon.restricted_to_role]}` 
+        };
+      }
+    } else if (coupon.restricted_to_role && !userId) {
+      return { valid: false, error: 'Faça login para usar este cupom' };
+    }
 
     // Check validity period
     if (coupon.valid_from && new Date(coupon.valid_from) > now) {
@@ -109,6 +136,7 @@ export const useCoupons = () => {
           valid_from: couponData.valid_from,
           valid_until: couponData.valid_until,
           is_active: couponData.is_active ?? true,
+          restricted_to_role: couponData.restricted_to_role || null,
         })
         .select()
         .single();
@@ -144,6 +172,7 @@ export const useCoupons = () => {
           valid_from: couponData.valid_from,
           valid_until: couponData.valid_until,
           is_active: couponData.is_active,
+          restricted_to_role: couponData.restricted_to_role,
         })
         .eq('id', id)
         .select()
