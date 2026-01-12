@@ -60,10 +60,14 @@ const Header = () => {
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end" className="w-56">
-                <div className="px-2 py-1.5 text-sm">
+                <div className="px-2 py-1.5 text-sm border-b border-border mb-1">
                   <p className="font-medium">{user.user_metadata?.full_name || "Usuário"}</p>
                   <p className="text-muted-foreground text-xs">{user.email}</p>
                 </div>
+                <DropdownMenuItem onClick={() => navigate("/profile")} className="cursor-pointer">
+                  <User className="mr-2 h-4 w-4" />
+                  Meu Perfil
+                </DropdownMenuItem>
                 <DropdownMenuItem onClick={handleSignOut} className="text-red-500 cursor-pointer">
                   <LogOut className="mr-2 h-4 w-4" />
                   Sair

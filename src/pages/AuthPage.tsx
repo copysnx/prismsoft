@@ -197,6 +197,18 @@ const AuthPage = () => {
               )}
             </div>
 
+            {isLogin && (
+              <div className="text-right">
+                <button
+                  type="button"
+                  onClick={() => navigate("/forgot-password")}
+                  className="text-sm text-purple-400 hover:text-purple-300 transition-colors"
+                >
+                  Esqueceu sua senha?
+                </button>
+              </div>
+            )}
+
             <Button 
               type="submit" 
               variant="hero" 
