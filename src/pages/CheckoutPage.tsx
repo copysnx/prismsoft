@@ -1,6 +1,6 @@
 import { useState } from 'react';
-import { useNavigate, Link } from 'react-router-dom';
-import { ChevronRight, Shield, Zap, CreditCard, User, Mail, Phone, Trash2, Plus, Minus, Tag, X } from 'lucide-react';
+import { Link } from 'react-router-dom';
+import { ChevronRight, Shield, CreditCard, User, Mail, Phone, Trash2, Plus, Minus, Tag, X, Zap } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Checkbox } from '@/components/ui/checkbox';
@@ -12,7 +12,6 @@ import Header from '@/components/Header';
 import Footer from '@/components/Footer';
 
 const CheckoutPage = () => {
-  const navigate = useNavigate();
   const { items, removeItem, updateQuantity, subtotal, discount, total, couponCode, applyCoupon, removeCoupon, clearCart } = useCart();
   const { user } = useAuth();
   const { toast } = useToast();
@@ -79,39 +78,80 @@ const CheckoutPage = () => {
     setIsProcessing(true);
     
     try {
-      if (paymentMethod === 'pix') {
-        // Create PIX payment via Flow API
-        const productNames = items.map(item => `${item.productName} (${item.variationName})`).join(', ');
-        
-        const { data, error } = await supabase.functions.invoke('create-payment', {
-          body: {
-            value: total,
-            description: `Compra: ${productNames}`,
-            customerName: `${contactInfo.firstName} ${contactInfo.lastName}`.trim(),
-            customerEmail: contactInfo.email,
-            customerPhone: contactInfo.phone,
-            expiresIn: 3600, // 1 hour
-          }
-        });
+      // Generate unique order ID
+      const orderNsu = `ORDER-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+      
+      // Build redirect URL with origin
+      const redirectUrl = `${window.location.origin}/pagamento/sucesso`;
+      
+      // Build webhook URL for payment notifications
+      const webhookUrl = `https://ysbybtrbfxjfjpybmlob.supabase.co/functions/v1/infinitepay-webhook`;
 
-        if (error) {
-          throw new Error(error.message || 'Erro ao criar pagamento');
+      // Prepare cart items for InfinitePay
+      const cartItems = items.map(item => ({
+        productName: item.productName,
+        variationName: item.variationName,
+        price: item.price,
+        quantity: item.quantity,
+      }));
+
+      // Format phone number for InfinitePay (needs +55 prefix)
+      const formattedPhone = contactInfo.phone 
+        ? (contactInfo.phone.startsWith('+') ? contactInfo.phone : `+55${contactInfo.phone.replace(/\D/g, '')}`)
+        : undefined;
+
+      const { data, error } = await supabase.functions.invoke('infinitepay-checkout', {
+        body: {
+          items: cartItems,
+          orderNsu: orderNsu,
+          redirectUrl: redirectUrl,
+          webhookUrl: webhookUrl,
+          customer: {
+            name: `${contactInfo.firstName} ${contactInfo.lastName}`.trim() || undefined,
+            email: contactInfo.email || undefined,
+            phone: formattedPhone,
+          },
         }
+      });
 
-        if (data.success && data.payment) {
-          // Store payment data and navigate to payment page
-          localStorage.setItem('current-payment', JSON.stringify(data.payment));
+      if (error) {
+        throw new Error(error.message || 'Erro ao criar checkout');
+      }
+
+      console.log('InfinitePay response:', data);
+
+      if (data.success && data.checkoutUrl) {
+        // Store order info for reference
+        localStorage.setItem('current-order', JSON.stringify({
+          orderNsu: orderNsu,
+          items: items,
+          total: total,
+          createdAt: new Date().toISOString(),
+        }));
+        
+        // Clear cart before redirecting
+        clearCart();
+        
+        // Redirect to InfinitePay checkout
+        window.location.href = data.checkoutUrl;
+      } else if (data.success && data.data) {
+        // Handle alternative response format
+        const checkoutUrl = data.data.url || data.data.checkout_url || data.data.link;
+        if (checkoutUrl) {
+          localStorage.setItem('current-order', JSON.stringify({
+            orderNsu: orderNsu,
+            items: items,
+            total: total,
+            createdAt: new Date().toISOString(),
+          }));
           clearCart();
-          navigate('/pagamento');
+          window.location.href = checkoutUrl;
         } else {
-          throw new Error(data.error || 'Erro ao processar pagamento');
+          console.error('No checkout URL in response:', data);
+          throw new Error('URL de checkout não encontrada na resposta');
         }
       } else {
-        // Card payment - coming soon
-        toast({
-          title: "Em breve!",
-          description: "Pagamento com cartão estará disponível em breve.",
-        });
+        throw new Error(data.error || 'Erro ao processar pagamento');
       }
     } catch (error: unknown) {
       console.error('Checkout error:', error);
@@ -193,7 +233,7 @@ const CheckoutPage = () => {
                   </div>
                   <div className="flex-1 text-left">
                     <span className="font-semibold">Cartão Crédito/Débito</span>
-                    <p className="text-sm text-muted-foreground">Pagamento seguro com Mercado Pago</p>
+                    <p className="text-sm text-muted-foreground">Pagamento seguro com InfinitePay</p>
                   </div>
                 </button>
               </div>
