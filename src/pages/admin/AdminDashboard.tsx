@@ -57,13 +57,6 @@ const AdminDashboard = () => {
       color: "from-pink-500 to-rose-500",
     },
     {
-      title: "Cupons",
-      description: "Gerenciar cupons de desconto",
-      icon: Tag,
-      href: "/admin/coupons",
-      color: "from-pink-500 to-rose-500",
-    },
-    {
       title: "Usuários",
       description: "Gerenciar usuários e permissões",
       icon: Users,
