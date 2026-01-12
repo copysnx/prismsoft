@@ -19,7 +19,7 @@ import ProfilePage from "./pages/ProfilePage";
 import PurchasesPage from "./pages/PurchasesPage";
 import AdminDashboard from "./pages/admin/AdminDashboard";
 import AdminProducts from "./pages/admin/AdminProducts";
-import AdminStock from "./pages/admin/AdminStock";
+
 import AdminKeys from "./pages/admin/AdminKeys";
 import AdminCoupons from "./pages/admin/AdminCoupons";
 import AdminReports from "./pages/admin/AdminReports";
@@ -49,7 +49,7 @@ const App = () => (
               <Route path="/termos" element={<TermsPage />} />
               <Route path="/admin" element={<AdminDashboard />} />
               <Route path="/admin/products" element={<AdminProducts />} />
-              <Route path="/admin/stock" element={<AdminStock />} />
+              
               <Route path="/admin/keys" element={<AdminKeys />} />
               <Route path="/admin/coupons" element={<AdminCoupons />} />
               <Route path="/admin/reports" element={<AdminReports />} />

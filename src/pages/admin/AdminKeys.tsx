@@ -2,7 +2,8 @@ import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { 
   ArrowLeft, Key, Plus, Trash2, Loader2, Search, 
-  Package, ChevronDown, ChevronUp, Copy, Eye, EyeOff 
+  Package, ChevronDown, ChevronUp, Copy, Eye, EyeOff,
+  AlertTriangle, Boxes
 } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { useAdmin } from "@/hooks/useAdmin";
@@ -42,7 +43,7 @@ const AdminKeys = () => {
   const { user, loading: authLoading } = useAuth();
   const { isAdmin, loading: adminLoading } = useAdmin();
   const { products, loading: productsLoading } = useProducts();
-  const { keys, loading: keysLoading, addKeys, deleteKey, deleteMultipleKeys, getKeyStats, refetch } = useProductKeys();
+  const { keys, loading: keysLoading, addKeys, deleteKey, deleteMultipleKeys, getKeyStats, getTotalStock, refetch } = useProductKeys();
   const navigate = useNavigate();
 
   const [searchTerm, setSearchTerm] = useState("");
@@ -176,8 +177,8 @@ const AdminKeys = () => {
               <ArrowLeft className="h-5 w-5" />
             </Button>
             <div>
-              <h1 className="text-2xl font-bold">Keys de Produtos</h1>
-              <p className="text-sm text-muted-foreground">Gerenciar licenças e códigos</p>
+              <h1 className="text-2xl font-bold">Keys & Estoque</h1>
+              <p className="text-sm text-muted-foreground">Gerenciar licenças e controlar estoque</p>
             </div>
           </div>
         </div>
@@ -186,15 +187,15 @@ const AdminKeys = () => {
       {/* Content */}
       <main className="container mx-auto px-4 py-8">
         {/* Stats Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8">
           <div className="bg-card rounded-xl border border-border p-4">
             <div className="flex items-center gap-3">
               <div className="w-10 h-10 rounded-lg bg-purple-500/20 flex items-center justify-center">
-                <Key className="h-5 w-5 text-purple-500" />
+                <Boxes className="h-5 w-5 text-purple-500" />
               </div>
               <div>
-                <p className="text-sm text-muted-foreground">Total de Keys</p>
-                <p className="text-2xl font-bold">{totalKeys}</p>
+                <p className="text-sm text-muted-foreground">Estoque Total</p>
+                <p className="text-2xl font-bold">{availableKeys}</p>
               </div>
             </div>
           </div>
@@ -205,7 +206,7 @@ const AdminKeys = () => {
                 <Key className="h-5 w-5 text-green-500" />
               </div>
               <div>
-                <p className="text-sm text-muted-foreground">Disponíveis</p>
+                <p className="text-sm text-muted-foreground">Keys Disponíveis</p>
                 <p className="text-2xl font-bold">{availableKeys}</p>
               </div>
             </div>
@@ -217,12 +218,81 @@ const AdminKeys = () => {
                 <Key className="h-5 w-5 text-blue-500" />
               </div>
               <div>
-                <p className="text-sm text-muted-foreground">Vendidas</p>
+                <p className="text-sm text-muted-foreground">Keys Vendidas</p>
                 <p className="text-2xl font-bold">{soldKeys}</p>
               </div>
             </div>
           </div>
+
+          <div className="bg-card rounded-xl border border-border p-4">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-lg bg-yellow-500/20 flex items-center justify-center">
+                <AlertTriangle className="h-5 w-5 text-yellow-500" />
+              </div>
+              <div>
+                <p className="text-sm text-muted-foreground">Estoque Baixo</p>
+                <p className="text-2xl font-bold">
+                  {products.reduce((acc, p) => {
+                    const productKeys = keys.filter(k => k.product_id === p.id);
+                    const hasLowStock = p.variations.some(v => {
+                      const varKeys = productKeys.filter(k => k.variation_id === v.id && k.status === 'available');
+                      return varKeys.length <= 5 && varKeys.length > 0;
+                    });
+                    const hasNoStock = p.variations.some(v => {
+                      const varKeys = productKeys.filter(k => k.variation_id === v.id && k.status === 'available');
+                      return varKeys.length === 0;
+                    });
+                    return acc + (hasLowStock || hasNoStock ? 1 : 0);
+                  }, 0)}
+                </p>
+              </div>
+            </div>
+          </div>
         </div>
+
+        {/* Low Stock Alerts */}
+        {(() => {
+          const lowStockItems = products.flatMap(p => {
+            const productKeys = keys.filter(k => k.product_id === p.id);
+            return p.variations
+              .filter(v => {
+                const varKeys = productKeys.filter(k => k.variation_id === v.id && k.status === 'available');
+                return varKeys.length <= 5;
+              })
+              .map(v => {
+                const varKeys = productKeys.filter(k => k.variation_id === v.id && k.status === 'available');
+                return { product: p, variation: v, stock: varKeys.length };
+              });
+          });
+
+          if (lowStockItems.length === 0) return null;
+
+          return (
+            <div className="bg-yellow-500/10 border border-yellow-500/30 rounded-xl p-4 mb-8">
+              <div className="flex items-center gap-2 mb-3">
+                <AlertTriangle className="h-5 w-5 text-yellow-500" />
+                <h3 className="font-semibold text-yellow-500">Alertas de Estoque Baixo</h3>
+              </div>
+              <div className="grid gap-2">
+                {lowStockItems.slice(0, 5).map(({ product, variation, stock }, index) => (
+                  <div key={index} className="flex items-center justify-between text-sm">
+                    <span>
+                      {product.name} - <span className="text-muted-foreground">{variation.name}</span>
+                    </span>
+                    <span className={stock === 0 ? "text-red-500 font-medium" : "text-yellow-500"}>
+                      {stock} keys disponíveis
+                    </span>
+                  </div>
+                ))}
+                {lowStockItems.length > 5 && (
+                  <p className="text-sm text-muted-foreground">
+                    +{lowStockItems.length - 5} outros itens
+                  </p>
+                )}
+              </div>
+            </div>
+          );
+        })()}
 
         {/* Search */}
         <div className="relative mb-6">
@@ -280,9 +350,15 @@ const AdminKeys = () => {
                     </div>
                     <div className="flex items-center gap-4">
                       <div className="text-right">
-                        <p className="text-sm text-muted-foreground">Keys</p>
+                        <p className="text-sm text-muted-foreground">Estoque</p>
                         <p className="font-semibold">
-                          {productKeys.filter(k => k.status === 'available').length} / {productKeys.length}
+                          {productKeys.filter(k => k.status === 'available').length} disponíveis
+                        </p>
+                      </div>
+                      <div className="text-right">
+                        <p className="text-sm text-muted-foreground">Total</p>
+                        <p className="font-semibold text-muted-foreground">
+                          {productKeys.length} keys
                         </p>
                       </div>
                       <Button
