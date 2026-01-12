@@ -23,9 +23,7 @@ const Header = () => {
       <div className="container mx-auto flex h-16 items-center justify-between px-4">
         {/* Logo */}
         <Link to="/" className="flex items-center gap-2">
-          <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-gradient-to-br from-purple-500 to-fuchsia-500">
-            <span className="text-lg font-black text-white">N</span>
-          </div>
+          <img src="/logo.png" alt="Logo" className="h-8 w-8" />
           <span className="text-lg font-bold text-foreground">Prism SysteM<span className="text-gradient">SysteM</span>
           </span>
         </Link>

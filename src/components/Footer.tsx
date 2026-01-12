@@ -6,9 +6,7 @@ const Footer = () => {
           {/* Logo & Description */}
           <div className="md:col-span-2">
             <a href="/" className="flex items-center gap-2 mb-4">
-              <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-gradient-to-br from-purple-500 to-fuchsia-500">
-                <span className="text-lg font-black text-white">N</span>
-              </div>
+              <img src="/logo.png" alt="Logo" className="h-8 w-8" />
               <span className="text-lg font-bold">Prism SysteM<span className="text-gradient">SysteM</span>
               </span>
             </a>
