@@ -54,7 +54,7 @@ const ProductPage = () => {
     <div className="min-h-screen bg-background flex flex-col">
       <Header />
       
-      <main className="flex-1 py-8">
+      <main className="flex-1 pt-24 pb-8">
         <div className="container mx-auto px-4">
           {/* Back Button */}
           <button 
