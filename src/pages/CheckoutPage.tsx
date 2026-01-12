@@ -13,7 +13,7 @@ import Footer from '@/components/Footer';
 
 const CheckoutPage = () => {
   const navigate = useNavigate();
-  const { items, removeItem, updateQuantity, subtotal, discount, total, couponCode, applyCoupon, removeCoupon, clearCart } = useCart();
+  const { items, removeItem, updateQuantity, subtotal, discount, total, couponCode, appliedCoupon, applyCoupon, removeCoupon, clearCart, isValidatingCoupon } = useCart();
   const { user } = useAuth();
   const { toast } = useToast();
   
@@ -29,20 +29,20 @@ const CheckoutPage = () => {
     phone: ''
   });
 
-  const handleApplyCoupon = () => {
+  const handleApplyCoupon = async () => {
     if (!couponInput.trim()) return;
     
-    const success = applyCoupon(couponInput);
-    if (success) {
+    const result = await applyCoupon(couponInput);
+    if (result.success) {
       toast({
         title: "Cupom aplicado!",
-        description: "Desconto de 10% aplicado ao seu pedido.",
+        description: "Desconto aplicado ao seu pedido.",
       });
       setCouponInput('');
     } else {
       toast({
         title: "Cupom inválido",
-        description: "O código inserido não é válido.",
+        description: result.error || "O código inserido não é válido.",
         variant: "destructive"
       });
     }
@@ -430,10 +430,15 @@ const CheckoutPage = () => {
                       <Button
                         variant="outline"
                         onClick={handleApplyCoupon}
+                        disabled={isValidatingCoupon}
                         className="gap-2"
                       >
-                        <Tag className="h-4 w-4" />
-                        Aplicar
+                        {isValidatingCoupon ? (
+                          <div className="h-4 w-4 border-2 border-muted-foreground/30 border-t-muted-foreground rounded-full animate-spin" />
+                        ) : (
+                          <Tag className="h-4 w-4" />
+                        )}
+                        {isValidatingCoupon ? 'Validando...' : 'Aplicar'}
                       </Button>
                     )}
                   </div>

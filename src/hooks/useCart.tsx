@@ -1,4 +1,5 @@
 import { createContext, useContext, useState, ReactNode, useEffect } from 'react';
+import { supabase } from '@/integrations/supabase/client';
 
 export interface CartItem {
   productId: string;
@@ -12,6 +13,13 @@ export interface CartItem {
   quantity: number;
 }
 
+export interface AppliedCoupon {
+  id: string;
+  code: string;
+  discount_type: 'percentage' | 'fixed';
+  discount_value: number;
+}
+
 interface CartContextType {
   items: CartItem[];
   addItem: (item: Omit<CartItem, 'quantity'>) => void;
@@ -23,8 +31,10 @@ interface CartContextType {
   discount: number;
   total: number;
   couponCode: string | null;
-  applyCoupon: (code: string) => boolean;
+  appliedCoupon: AppliedCoupon | null;
+  applyCoupon: (code: string) => Promise<{ success: boolean; error?: string }>;
   removeCoupon: () => void;
+  isValidatingCoupon: boolean;
 }
 
 const CartContext = createContext<CartContextType | undefined>(undefined);
@@ -38,21 +48,24 @@ export const CartProvider = ({ children }: { children: ReactNode }) => {
     return stored ? JSON.parse(stored) : [];
   });
   
-  const [couponCode, setCouponCode] = useState<string | null>(() => {
-    return localStorage.getItem(COUPON_STORAGE_KEY);
+  const [appliedCoupon, setAppliedCoupon] = useState<AppliedCoupon | null>(() => {
+    const stored = localStorage.getItem(COUPON_STORAGE_KEY);
+    return stored ? JSON.parse(stored) : null;
   });
+  
+  const [isValidatingCoupon, setIsValidatingCoupon] = useState(false);
 
   useEffect(() => {
     localStorage.setItem(CART_STORAGE_KEY, JSON.stringify(items));
   }, [items]);
 
   useEffect(() => {
-    if (couponCode) {
-      localStorage.setItem(COUPON_STORAGE_KEY, couponCode);
+    if (appliedCoupon) {
+      localStorage.setItem(COUPON_STORAGE_KEY, JSON.stringify(appliedCoupon));
     } else {
       localStorage.removeItem(COUPON_STORAGE_KEY);
     }
-  }, [couponCode]);
+  }, [appliedCoupon]);
 
   const addItem = (item: Omit<CartItem, 'quantity'>) => {
     setItems(prev => {
@@ -91,29 +104,93 @@ export const CartProvider = ({ children }: { children: ReactNode }) => {
 
   const clearCart = () => {
     setItems([]);
-    setCouponCode(null);
+    setAppliedCoupon(null);
   };
 
   const totalItems = items.reduce((sum, item) => sum + item.quantity, 0);
   
   const subtotal = items.reduce((sum, item) => sum + (item.price * item.quantity), 0);
   
-  // Simple coupon system - 10% off with code "PRISM10"
-  const discount = couponCode === 'PRISM10' ? subtotal * 0.1 : 0;
-  
-  const total = subtotal - discount;
-
-  const applyCoupon = (code: string): boolean => {
-    const upperCode = code.toUpperCase();
-    if (upperCode === 'PRISM10') {
-      setCouponCode(upperCode);
-      return true;
+  // Calculate discount based on applied coupon
+  const calculateDiscount = (): number => {
+    if (!appliedCoupon) return 0;
+    
+    if (appliedCoupon.discount_type === 'percentage') {
+      return subtotal * (appliedCoupon.discount_value / 100);
+    } else {
+      return Math.min(appliedCoupon.discount_value, subtotal);
     }
-    return false;
+  };
+  
+  const discount = calculateDiscount();
+  const total = subtotal - discount;
+  const couponCode = appliedCoupon?.code || null;
+
+  const applyCoupon = async (code: string): Promise<{ success: boolean; error?: string }> => {
+    const upperCode = code.toUpperCase().trim();
+    
+    if (!upperCode) {
+      return { success: false, error: 'Digite um código de cupom' };
+    }
+    
+    setIsValidatingCoupon(true);
+    
+    try {
+      // Fetch coupon from database
+      const { data, error } = await supabase
+        .from('coupons')
+        .select('*')
+        .eq('code', upperCode)
+        .eq('is_active', true)
+        .single();
+
+      if (error || !data) {
+        return { success: false, error: 'Cupom não encontrado ou inválido' };
+      }
+
+      const coupon = data;
+      const now = new Date();
+
+      // Check validity period
+      if (coupon.valid_from && new Date(coupon.valid_from) > now) {
+        return { success: false, error: 'Este cupom ainda não está válido' };
+      }
+
+      if (coupon.valid_until && new Date(coupon.valid_until) < now) {
+        return { success: false, error: 'Este cupom expirou' };
+      }
+
+      // Check usage limit
+      if (coupon.max_uses !== null && coupon.current_uses >= coupon.max_uses) {
+        return { success: false, error: 'Este cupom atingiu o limite de uso' };
+      }
+
+      // Check minimum purchase
+      if (subtotal < coupon.min_purchase) {
+        return { 
+          success: false, 
+          error: `Compra mínima de R$ ${Number(coupon.min_purchase).toFixed(2)} necessária` 
+        };
+      }
+
+      // Apply coupon
+      setAppliedCoupon({
+        id: coupon.id,
+        code: coupon.code,
+        discount_type: coupon.discount_type as 'percentage' | 'fixed',
+        discount_value: Number(coupon.discount_value),
+      });
+
+      return { success: true };
+    } catch {
+      return { success: false, error: 'Erro ao validar cupom' };
+    } finally {
+      setIsValidatingCoupon(false);
+    }
   };
 
   const removeCoupon = () => {
-    setCouponCode(null);
+    setAppliedCoupon(null);
   };
 
   return (
@@ -128,8 +205,10 @@ export const CartProvider = ({ children }: { children: ReactNode }) => {
       discount,
       total,
       couponCode,
+      appliedCoupon,
       applyCoupon,
-      removeCoupon
+      removeCoupon,
+      isValidatingCoupon
     }}>
       {children}
     </CartContext.Provider>
