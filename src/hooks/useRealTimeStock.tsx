@@ -52,17 +52,19 @@ export const useRealTimeStock = (productId?: string) => {
   };
 
   useEffect(() => {
+    // Always fetch when productId changes (including from undefined to a value)
     fetchStock();
 
     // Subscribe to real-time updates
     const channel = supabase
-      .channel('stock-updates')
+      .channel(`stock-updates-${productId || 'all'}`)
       .on(
         'postgres_changes',
         {
           event: '*',
           schema: 'public',
-          table: 'product_keys'
+          table: 'product_keys',
+          ...(productId ? { filter: `product_id=eq.${productId}` } : {})
         },
         () => {
           // Refetch stock on any change
