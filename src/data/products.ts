@@ -135,7 +135,6 @@ export const products: Product[] = [
       { id: "diario", name: "Diário", price: 21.90, originalPrice: 34.90, stock: 100 },
       { id: "7-dias", name: "7 Dias", price: 49.90, originalPrice: 69.90, stock: 50 },
       { id: "30-dias", name: "30 Dias", price: 89.90, originalPrice: 129.90, stock: 50 },
-      { id: "lifetime", name: "Lifetime", price: 179.90, originalPrice: 299.90, stock: 20 },
     ]
   },
 ];
