@@ -19,7 +19,7 @@ const features = [
   {
     icon: CreditCard,
     title: "Várias Formas de Pagamento",
-    description: "Pix, cartão, boleto e muito mais",
+    description: "Pix, cartão e muito mais",
   },
 ];
 
