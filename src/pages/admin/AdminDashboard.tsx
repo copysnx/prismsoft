@@ -1,6 +1,6 @@
 import { useEffect } from "react";
 import { useNavigate, Link } from "react-router-dom";
-import { Package, Users, Settings, BarChart3, ArrowLeft, Key, Tag } from "lucide-react";
+import { Package, Users, BarChart3, ArrowLeft, Key, Tag } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { useAdmin } from "@/hooks/useAdmin";
 import { Button } from "@/components/ui/button";
@@ -69,13 +69,6 @@ const AdminDashboard = () => {
       icon: BarChart3,
       href: "/admin/reports",
       color: "from-green-500 to-emerald-500",
-    },
-    {
-      title: "Configurações",
-      description: "Configurações do sistema",
-      icon: Settings,
-      href: "/admin/settings",
-      color: "from-orange-500 to-amber-500",
     },
   ];
 
