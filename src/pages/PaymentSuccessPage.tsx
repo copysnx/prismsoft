@@ -1,6 +1,6 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
-import { CheckCircle, Download, Home, Package, Clock, CreditCard, Zap, Key, Copy, Check, Loader2, ExternalLink, Mail } from 'lucide-react';
+import { CheckCircle, Download, Home, Package, Clock, CreditCard, Zap, Key, Copy, Check, Loader2, ExternalLink, Mail, PartyPopper } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { supabase } from '@/integrations/supabase/client';
@@ -8,6 +8,7 @@ import { useToast } from '@/hooks/use-toast';
 import Header from '@/components/Header';
 import Footer from '@/components/Footer';
 import BackButton from '@/components/BackButton';
+import cloveImage from '@/assets/clove-valorant.png';
 interface DeliveredKey {
   id: string;
   keyValue: string;
@@ -178,49 +179,91 @@ const PaymentSuccessPage = () => {
         
         <main className="container mx-auto px-4 py-8 pt-24">
           <div className="max-w-md mx-auto">
-            <div className="bg-card border border-border rounded-2xl p-8 text-center">
-              {/* Success Icon */}
-              <div className="w-20 h-20 bg-green-500/20 rounded-full flex items-center justify-center mx-auto mb-6">
-                <CheckCircle className="h-10 w-10 text-green-500" />
+            <div className="relative bg-card border border-green-500/30 rounded-3xl overflow-hidden">
+              {/* Background with gradient and glow effects */}
+              <div className="absolute inset-0 bg-gradient-to-br from-green-500/10 via-emerald-500/5 to-purple-500/10 pointer-events-none" />
+              <div className="absolute top-0 left-1/2 -translate-x-1/2 w-96 h-96 bg-green-500/20 rounded-full blur-3xl pointer-events-none" />
+              
+              {/* Confetti-like particles */}
+              <div className="absolute inset-0 overflow-hidden pointer-events-none">
+                {[...Array(12)].map((_, i) => (
+                  <div 
+                    key={i}
+                    className="absolute w-2 h-2 rounded-full animate-pulse"
+                    style={{
+                      background: i % 3 === 0 ? '#22c55e' : i % 3 === 1 ? '#a855f7' : '#fbbf24',
+                      top: `${10 + (i * 7)}%`,
+                      left: `${5 + (i * 8)}%`,
+                      animationDelay: `${i * 0.2}s`,
+                      opacity: 0.6
+                    }}
+                  />
+                ))}
               </div>
-
-              <h1 className="text-2xl font-bold text-foreground mb-2">
-                Pagamento Confirmado!
-              </h1>
-              <p className="text-muted-foreground mb-6">
-                Para visualizar suas chaves, confirme o email usado na compra.
-              </p>
-
-              {/* Email Verification Form */}
-              <div className="space-y-4">
-                <div className="flex items-center gap-2 bg-muted/30 rounded-xl p-4">
-                  <Mail className="h-5 w-5 text-muted-foreground" />
-                  <Input type="email" placeholder="Digite seu email" value={emailInput} onChange={e => setEmailInput(e.target.value)} onKeyDown={e => e.key === 'Enter' && handleVerifyEmail()} className="border-0 bg-transparent focus-visible:ring-0" />
+              
+              {/* Header with celebration */}
+              <div className="relative bg-gradient-to-r from-green-600 via-emerald-500 to-green-600 p-6">
+                <div className="absolute inset-0 bg-[url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNDAiIGhlaWdodD0iNDAiIHZpZXdCb3g9IjAgMCA0MCA0MCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48ZyBmaWxsPSJub25lIiBmaWxsLXJ1bGU9ImV2ZW5vZGQiPjxjaXJjbGUgZmlsbD0icmdiYSgyNTUsMjU1LDI1NSwwLjEpIiBjeD0iMjAiIGN5PSIyMCIgcj0iMiIvPjwvZz48L3N2Zz4=')] opacity-30" />
+                <div className="relative flex items-center justify-center gap-3">
+                  <PartyPopper className="h-7 w-7 text-yellow-300 animate-bounce" />
+                  <h2 className="text-xl font-bold text-white">Pagamento Confirmado!</h2>
+                  <PartyPopper className="h-7 w-7 text-yellow-300 animate-bounce" style={{ animationDelay: '0.2s' }} />
+                </div>
+              </div>
+              
+              {/* Content */}
+              <div className="relative p-8 flex flex-col items-center">
+                {/* Character Image with glow */}
+                <div className="relative mb-6 group">
+                  <div className="absolute -inset-4 bg-gradient-to-r from-green-500/30 via-emerald-500/30 to-purple-500/30 rounded-full blur-2xl opacity-60 group-hover:opacity-80 transition-opacity animate-pulse" style={{ animationDuration: '3s' }} />
+                  <div className="relative">
+                    <img 
+                      src={cloveImage} 
+                      alt="Clove Valorant" 
+                      className="h-40 w-auto object-contain drop-shadow-2xl transform hover:scale-105 transition-transform duration-500"
+                    />
+                    {/* Success badge */}
+                    <div className="absolute -bottom-2 -right-2 w-12 h-12 bg-gradient-to-br from-green-400 to-green-600 rounded-full flex items-center justify-center shadow-lg shadow-green-500/40 border-4 border-card">
+                      <CheckCircle className="h-6 w-6 text-white" />
+                    </div>
+                  </div>
                 </div>
 
-                <Button variant="hero" className="w-full" onClick={handleVerifyEmail} disabled={verifying}>
-                  {verifying ? <>
-                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                      Verificando...
-                    </> : 'Verificar Email'}
-                </Button>
+                <p className="text-muted-foreground text-center mb-6">
+                  Para visualizar suas chaves, confirme o email usado na compra.
+                </p>
 
-                {orderNsu && <div className="text-sm text-muted-foreground">
-                    <span className="flex items-center justify-center gap-2">
-                      <Package className="h-4 w-4" />
-                      Pedido: <span className="font-mono">{orderNsu}</span>
-                    </span>
-                  </div>}
-              </div>
+                {/* Email Verification Form */}
+                <div className="w-full space-y-4">
+                  <div className="flex items-center gap-2 bg-muted/30 rounded-xl p-4">
+                    <Mail className="h-5 w-5 text-muted-foreground" />
+                    <Input type="email" placeholder="Digite seu email" value={emailInput} onChange={e => setEmailInput(e.target.value)} onKeyDown={e => e.key === 'Enter' && handleVerifyEmail()} className="border-0 bg-transparent focus-visible:ring-0" />
+                  </div>
 
-              {/* Back Home Button */}
-              <div className="mt-6 pt-6 border-t border-border">
-                <Button variant="outline" asChild className="w-full gap-2">
-                  <Link to="/">
-                    <Home className="h-4 w-4" />
-                    Voltar ao Início
-                  </Link>
-                </Button>
+                  <Button variant="hero" className="w-full h-12" onClick={handleVerifyEmail} disabled={verifying}>
+                    {verifying ? <>
+                        <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                        Verificando...
+                      </> : 'Verificar Email'}
+                  </Button>
+
+                  {orderNsu && <div className="text-sm text-muted-foreground">
+                      <span className="flex items-center justify-center gap-2">
+                        <Package className="h-4 w-4" />
+                        Pedido: <span className="font-mono">{orderNsu}</span>
+                      </span>
+                    </div>}
+                </div>
+
+                {/* Back Home Button */}
+                <div className="w-full mt-6 pt-6 border-t border-border">
+                  <Button variant="outline" asChild className="w-full gap-2">
+                    <Link to="/">
+                      <Home className="h-4 w-4" />
+                      Voltar ao Início
+                    </Link>
+                  </Button>
+                </div>
               </div>
             </div>
           </div>
