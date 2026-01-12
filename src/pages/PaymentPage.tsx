@@ -1,11 +1,12 @@
 import { useState, useEffect } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
-import { Copy, Check, Clock, RefreshCw, ArrowLeft, CheckCircle, XCircle } from 'lucide-react';
+import { Copy, Check, Clock, RefreshCw, ArrowLeft, CheckCircle, XCircle, Smartphone, QrCode, Sparkles, ShieldCheck } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import Header from '@/components/Header';
 import Footer from '@/components/Footer';
+import BackButton from '@/components/BackButton';
 
 interface PaymentData {
   id: string;
@@ -249,25 +250,32 @@ const PaymentPage = () => {
       <main className="container mx-auto px-4 py-8 pt-24">
         <div className="max-w-lg mx-auto">
           {/* Back Button */}
-          <button 
-            onClick={() => navigate(-1)}
-            className="flex items-center gap-2 px-4 py-2 rounded-xl bg-card border border-border text-muted-foreground hover:text-foreground hover:border-purple-500/50 transition-all mb-6"
-          >
-            <ArrowLeft className="h-5 w-5" />
-            Voltar
-          </button>
+          <div className="mb-6">
+            <BackButton to="/" />
+          </div>
 
           {/* Payment Status - Paid */}
           {paymentStatus === 'paid' && (
-            <div className="bg-card border border-green-500/30 rounded-2xl p-8 text-center">
-              <div className="w-20 h-20 bg-green-500/20 rounded-full flex items-center justify-center mx-auto mb-6">
-                <CheckCircle className="h-10 w-10 text-green-500" />
+            <div className="relative bg-card border border-green-500/30 rounded-3xl p-10 text-center overflow-hidden">
+              {/* Background glow */}
+              <div className="absolute inset-0 bg-gradient-to-b from-green-500/10 to-transparent pointer-events-none" />
+              
+              {/* Animated success icon */}
+              <div className="relative w-24 h-24 mx-auto mb-6">
+                <div className="absolute inset-0 bg-green-500/20 rounded-full animate-ping" style={{ animationDuration: '2s' }} />
+                <div className="relative w-24 h-24 bg-gradient-to-br from-green-400 to-green-600 rounded-full flex items-center justify-center shadow-lg shadow-green-500/30">
+                  <CheckCircle className="h-12 w-12 text-white" />
+                </div>
               </div>
-              <h1 className="text-2xl font-bold mb-2 text-green-500">Pagamento Confirmado!</h1>
-              <p className="text-muted-foreground mb-6">
+              
+              <h1 className="text-3xl font-bold mb-3 bg-gradient-to-r from-green-400 to-emerald-500 bg-clip-text text-transparent">
+                Pagamento Confirmado!
+              </h1>
+              <p className="text-muted-foreground mb-8 text-lg">
                 Seu pagamento foi processado com sucesso. Você receberá seu produto por email.
               </p>
-              <Button onClick={() => navigate('/')} variant="hero" size="lg">
+              <Button onClick={() => navigate('/')} variant="hero" size="lg" className="px-8">
+                <Sparkles className="h-5 w-5 mr-2" />
                 Voltar à loja
               </Button>
             </div>
@@ -275,15 +283,24 @@ const PaymentPage = () => {
 
           {/* Payment Status - Expired */}
           {paymentStatus === 'expired' && (
-            <div className="bg-card border border-destructive/30 rounded-2xl p-8 text-center">
-              <div className="w-20 h-20 bg-destructive/20 rounded-full flex items-center justify-center mx-auto mb-6">
-                <XCircle className="h-10 w-10 text-destructive" />
+            <div className="relative bg-card border border-destructive/30 rounded-3xl p-10 text-center overflow-hidden">
+              {/* Background glow */}
+              <div className="absolute inset-0 bg-gradient-to-b from-destructive/10 to-transparent pointer-events-none" />
+              
+              <div className="relative w-24 h-24 mx-auto mb-6">
+                <div className="w-24 h-24 bg-gradient-to-br from-red-400 to-red-600 rounded-full flex items-center justify-center shadow-lg shadow-red-500/30">
+                  <XCircle className="h-12 w-12 text-white" />
+                </div>
               </div>
-              <h1 className="text-2xl font-bold mb-2 text-destructive">Pagamento Expirado</h1>
-              <p className="text-muted-foreground mb-6">
+              
+              <h1 className="text-3xl font-bold mb-3 bg-gradient-to-r from-red-400 to-rose-500 bg-clip-text text-transparent">
+                Pagamento Expirado
+              </h1>
+              <p className="text-muted-foreground mb-8 text-lg">
                 O tempo para pagamento expirou. Por favor, tente novamente.
               </p>
-              <Button onClick={() => navigate('/checkout')} variant="hero" size="lg">
+              <Button onClick={() => navigate('/checkout')} variant="hero" size="lg" className="px-8">
+                <RefreshCw className="h-5 w-5 mr-2" />
                 Tentar novamente
               </Button>
             </div>
@@ -291,51 +308,84 @@ const PaymentPage = () => {
 
           {/* Payment Status - Pending */}
           {paymentStatus === 'pending' && (
-            <div className="bg-card border border-border rounded-2xl overflow-hidden">
+            <div className="relative bg-card border border-border rounded-3xl overflow-hidden shadow-2xl shadow-primary/10">
+              {/* Animated border glow */}
+              <div className="absolute inset-0 rounded-3xl bg-gradient-to-r from-purple-600/20 via-fuchsia-600/20 to-purple-600/20 animate-pulse pointer-events-none" style={{ animationDuration: '3s' }} />
+              
               {/* Header */}
-              <div className="bg-gradient-to-r from-purple-600 to-fuchsia-600 p-6 text-center">
-                <h1 className="text-2xl font-bold text-white mb-2">Pagamento via PIX</h1>
-                <p className="text-white/80">Escaneie o QR Code ou copie o código</p>
+              <div className="relative bg-gradient-to-r from-purple-600 via-violet-600 to-fuchsia-600 p-8 text-center">
+                {/* Decorative elements */}
+                <div className="absolute top-0 left-0 w-32 h-32 bg-white/10 rounded-full blur-3xl -translate-x-1/2 -translate-y-1/2" />
+                <div className="absolute bottom-0 right-0 w-32 h-32 bg-white/10 rounded-full blur-3xl translate-x-1/2 translate-y-1/2" />
+                
+                <div className="relative">
+                  <div className="w-16 h-16 bg-white/20 backdrop-blur-sm rounded-2xl flex items-center justify-center mx-auto mb-4 shadow-lg">
+                    <QrCode className="h-8 w-8 text-white" />
+                  </div>
+                  <h1 className="text-2xl font-bold text-white mb-2">Pagamento via PIX</h1>
+                  <p className="text-white/80 flex items-center justify-center gap-2">
+                    <ShieldCheck className="h-4 w-4" />
+                    Escaneie o QR Code ou copie o código
+                  </p>
+                </div>
               </div>
 
               {/* Timer */}
-              <div className="flex items-center justify-center gap-2 py-4 border-b border-border bg-muted/30">
-                <Clock className="h-5 w-5 text-primary" />
-                <span className="text-sm text-muted-foreground">Expira em:</span>
-                <span className="font-mono font-bold text-lg">{timeLeft}</span>
+              <div className="relative flex items-center justify-center gap-3 py-5 border-b border-border bg-gradient-to-r from-muted/50 via-muted/80 to-muted/50">
+                <div className="flex items-center gap-2 px-4 py-2 bg-background/50 rounded-full border border-border">
+                  <Clock className="h-5 w-5 text-primary animate-pulse" />
+                  <span className="text-sm text-muted-foreground">Expira em:</span>
+                  <span className="font-mono font-bold text-xl text-foreground bg-gradient-to-r from-purple-400 to-fuchsia-400 bg-clip-text text-transparent">
+                    {timeLeft}
+                  </span>
+                </div>
               </div>
 
               {/* QR Code */}
-              <div className="p-8 flex flex-col items-center">
-                <div className="bg-white p-4 rounded-xl mb-6">
-                  <img 
-                    src={paymentData.qrCodeImage} 
-                    alt="QR Code PIX" 
-                    className="w-48 h-48"
-                  />
+              <div className="relative p-8 flex flex-col items-center">
+                {/* QR Code Container with glow */}
+                <div className="relative mb-8 group">
+                  <div className="absolute -inset-2 bg-gradient-to-r from-purple-600 to-fuchsia-600 rounded-2xl blur-lg opacity-30 group-hover:opacity-50 transition-opacity" />
+                  <div className="relative bg-white p-5 rounded-2xl shadow-xl">
+                    <img 
+                      src={paymentData.qrCodeImage} 
+                      alt="QR Code PIX" 
+                      className="w-52 h-52"
+                    />
+                  </div>
                 </div>
 
                 {/* Value */}
-                <div className="text-center mb-6">
-                  <p className="text-sm text-muted-foreground mb-1">Valor a pagar</p>
-                  <p className="text-3xl font-bold text-gradient">{formatPrice(paymentData.value)}</p>
+                <div className="text-center mb-8 p-4 rounded-2xl bg-gradient-to-r from-muted/30 via-muted/50 to-muted/30 border border-border/50 w-full">
+                  <p className="text-sm text-muted-foreground mb-2 uppercase tracking-wide">Valor a pagar</p>
+                  <p className="text-4xl font-bold bg-gradient-to-r from-purple-400 via-violet-400 to-fuchsia-400 bg-clip-text text-transparent">
+                    {formatPrice(paymentData.value)}
+                  </p>
                 </div>
 
-                {/* PIX Code */}
-                <div className="w-full space-y-3">
+                {/* PIX Code Buttons */}
+                <div className="w-full space-y-4">
                   <Button
                     onClick={handleCopyPixCode}
-                    className="w-full h-12 gap-2"
-                    variant={copied ? "secondary" : "hero"}
+                    className={`w-full h-14 gap-3 text-base font-semibold transition-all duration-300 ${
+                      copied 
+                        ? 'bg-green-500 hover:bg-green-600 text-white' 
+                        : ''
+                    }`}
+                    variant={copied ? "default" : "hero"}
                   >
                     {copied ? (
                       <>
-                        <Check className="h-5 w-5" />
+                        <div className="w-6 h-6 bg-white/20 rounded-full flex items-center justify-center">
+                          <Check className="h-4 w-4" />
+                        </div>
                         Código copiado!
                       </>
                     ) : (
                       <>
-                        <Copy className="h-5 w-5" />
+                        <div className="w-6 h-6 bg-white/20 rounded-full flex items-center justify-center">
+                          <Copy className="h-4 w-4" />
+                        </div>
                         Copiar código PIX
                       </>
                     )}
@@ -345,12 +395,12 @@ const PaymentPage = () => {
                     onClick={handleCheckPayment}
                     disabled={checking}
                     variant="outline"
-                    className="w-full h-12 gap-2"
+                    className="w-full h-14 gap-3 text-base font-medium border-2 hover:border-primary/50 hover:bg-primary/5 transition-all duration-300"
                   >
                     {checking ? (
                       <>
-                        <RefreshCw className="h-5 w-5 animate-spin" />
-                        Verificando...
+                        <RefreshCw className="h-5 w-5 animate-spin text-primary" />
+                        <span className="text-primary">Verificando pagamento...</span>
                       </>
                     ) : (
                       <>
@@ -362,11 +412,31 @@ const PaymentPage = () => {
                 </div>
 
                 {/* Instructions */}
-                <div className="mt-6 text-center text-sm text-muted-foreground">
-                  <p>1. Abra o app do seu banco</p>
-                  <p>2. Escolha pagar com PIX</p>
-                  <p>3. Escaneie o QR Code ou cole o código</p>
-                  <p>4. Confirme o pagamento</p>
+                <div className="mt-8 w-full">
+                  <div className="grid grid-cols-2 gap-3">
+                    {[
+                      { step: 1, icon: Smartphone, text: 'Abra o app do banco' },
+                      { step: 2, icon: QrCode, text: 'Escolha pagar com PIX' },
+                      { step: 3, icon: Copy, text: 'Escaneie ou cole o código' },
+                      { step: 4, icon: CheckCircle, text: 'Confirme o pagamento' },
+                    ].map(({ step, icon: Icon, text }) => (
+                      <div 
+                        key={step} 
+                        className="flex items-center gap-3 p-3 rounded-xl bg-muted/30 border border-border/50 hover:border-primary/30 transition-colors"
+                      >
+                        <div className="w-8 h-8 rounded-full bg-gradient-to-br from-purple-500/20 to-fuchsia-500/20 flex items-center justify-center flex-shrink-0">
+                          <Icon className="h-4 w-4 text-primary" />
+                        </div>
+                        <span className="text-xs text-muted-foreground leading-tight">{text}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Security badge */}
+                <div className="mt-6 flex items-center gap-2 text-xs text-muted-foreground">
+                  <ShieldCheck className="h-4 w-4 text-green-500" />
+                  <span>Pagamento seguro e criptografado</span>
                 </div>
               </div>
             </div>
