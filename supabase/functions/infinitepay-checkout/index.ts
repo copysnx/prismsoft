@@ -1,4 +1,5 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
+import { z } from "https://deno.land/x/zod@v3.22.4/mod.ts";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -8,24 +9,30 @@ const corsHeaders = {
 const INFINITEPAY_API_URL = 'https://api.infinitepay.io/invoices/public/checkout/links';
 const INFINITEPAY_HANDLE = 'italo-alexandre-660';
 
-interface CartItem {
-  productName: string;
-  variationName: string;
-  price: number;
-  quantity: number;
-}
+// =======================================================
+// INPUT VALIDATION SCHEMAS
+// =======================================================
 
-interface CheckoutRequest {
-  items: CartItem[];
-  orderNsu: string;
-  redirectUrl: string;
-  webhookUrl?: string;
-  customer?: {
-    name?: string;
-    email?: string;
-    phone?: string;
-  };
-}
+const CartItemSchema = z.object({
+  productName: z.string().min(1).max(200, { message: "Nome do produto muito longo" }),
+  variationName: z.string().min(1).max(200, { message: "Nome da variação muito longo" }),
+  price: z.number().positive({ message: "Preço deve ser positivo" }).max(999999, { message: "Preço máximo excedido" }),
+  quantity: z.number().int().positive().max(100, { message: "Quantidade inválida" }),
+});
+
+const CustomerSchema = z.object({
+  name: z.string().max(200).optional(),
+  email: z.string().email().max(255).optional(),
+  phone: z.string().max(20).optional(),
+});
+
+const CheckoutRequestSchema = z.object({
+  items: z.array(CartItemSchema).min(1, { message: "Carrinho vazio" }).max(50, { message: "Muitos itens no carrinho" }),
+  orderNsu: z.string().max(100),
+  redirectUrl: z.string().url({ message: "URL de redirecionamento inválida" }).max(500),
+  webhookUrl: z.string().url({ message: "URL do webhook inválida" }).max(500).optional(),
+  customer: CustomerSchema.optional(),
+});
 
 interface InfinitePayItem {
   quantity: number;
@@ -42,22 +49,40 @@ const handler = async (req: Request): Promise<Response> => {
   }
 
   try {
-    const body: CheckoutRequest = await req.json();
-    console.log('Request body:', JSON.stringify(body));
-
-    if (!body.items || body.items.length === 0) {
+    // =======================================================
+    // INPUT VALIDATION WITH ZOD
+    // =======================================================
+    
+    let rawBody: unknown;
+    try {
+      rawBody = await req.json();
+    } catch {
       return new Response(
-        JSON.stringify({ success: false, error: 'Nenhum item no carrinho' }),
+        JSON.stringify({ success: false, error: 'JSON inválido' }),
         { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
+
+    const parseResult = CheckoutRequestSchema.safeParse(rawBody);
+    
+    if (!parseResult.success) {
+      console.error('Validation error:', parseResult.error.issues);
+      const firstError = parseResult.error.issues[0]?.message || 'Dados inválidos';
+      return new Response(
+        JSON.stringify({ success: false, error: firstError }),
+        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    const body = parseResult.data;
+    console.log('Validated checkout request for order:', body.orderNsu);
 
     // Convert cart items to InfinitePay format
     // Price must be in cents (R$ 10,00 = 1000)
     const infinitePayItems: InfinitePayItem[] = body.items.map(item => ({
       quantity: item.quantity,
       price: Math.round(item.price * 100), // Convert to cents
-      description: `${item.productName} - ${item.variationName}`,
+      description: `${item.productName} - ${item.variationName}`.substring(0, 200), // Limit description length
     }));
 
     // Build the payload
@@ -66,15 +91,11 @@ const handler = async (req: Request): Promise<Response> => {
       items: infinitePayItems,
     };
 
-    // Add optional order NSU
-    if (body.orderNsu) {
-      payload.order_nsu = body.orderNsu;
-    }
+    // Add order NSU
+    payload.order_nsu = body.orderNsu;
 
     // Add redirect URL
-    if (body.redirectUrl) {
-      payload.redirect_url = body.redirectUrl;
-    }
+    payload.redirect_url = body.redirectUrl;
 
     // Add webhook URL if provided
     if (body.webhookUrl) {
@@ -90,7 +111,7 @@ const handler = async (req: Request): Promise<Response> => {
       };
     }
 
-    console.log('Sending request to InfinitePay:', JSON.stringify(payload));
+    console.log('Sending request to InfinitePay');
 
     // Make request to InfinitePay API
     const response = await fetch(INFINITEPAY_API_URL, {
@@ -103,7 +124,6 @@ const handler = async (req: Request): Promise<Response> => {
 
     const data = await response.json();
     console.log('InfinitePay response status:', response.status);
-    console.log('InfinitePay response:', JSON.stringify(data));
 
     if (!response.ok) {
       console.error('InfinitePay API error:', data);
@@ -121,7 +141,7 @@ const handler = async (req: Request): Promise<Response> => {
     const checkoutUrl = data.url || data.checkout_url || data.link;
     
     if (checkoutUrl) {
-      console.log('Checkout URL created:', checkoutUrl);
+      console.log('Checkout URL created successfully');
       return new Response(
         JSON.stringify({
           success: true,
@@ -144,9 +164,8 @@ const handler = async (req: Request): Promise<Response> => {
 
   } catch (error: unknown) {
     console.error('Error in infinitepay-checkout function:', error);
-    const errorMessage = error instanceof Error ? error.message : 'Erro interno';
     return new Response(
-      JSON.stringify({ success: false, error: errorMessage }),
+      JSON.stringify({ success: false, error: 'Erro interno' }),
       { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
   }

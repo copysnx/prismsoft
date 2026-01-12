@@ -1,26 +1,33 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { z } from "https://deno.land/x/zod@v3.22.4/mod.ts";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
-interface WebhookPayload {
-  invoice_slug: string;
-  amount: number;
-  paid_amount: number;
-  installments: number;
-  capture_method: 'credit_card' | 'pix';
-  transaction_nsu: string;
-  order_nsu: string;
-  receipt_url: string;
-  items: Array<{
-    quantity: number;
-    price: number;
-    description: string;
-  }>;
-}
+// =======================================================
+// INPUT VALIDATION SCHEMA
+// =======================================================
+
+const WebhookItemSchema = z.object({
+  quantity: z.number().int().positive(),
+  price: z.number().positive(),
+  description: z.string().max(500),
+});
+
+const WebhookPayloadSchema = z.object({
+  invoice_slug: z.string().max(200).optional(),
+  amount: z.number().optional(),
+  paid_amount: z.number().positive({ message: "Valor do pagamento inválido" }),
+  installments: z.number().int().positive().max(24).optional(),
+  capture_method: z.enum(['credit_card', 'pix']).optional(),
+  transaction_nsu: z.string().min(1).max(100, { message: "NSU da transação inválido" }),
+  order_nsu: z.string().min(1).max(100, { message: "NSU do pedido inválido" }),
+  receipt_url: z.string().url().max(500).optional(),
+  items: z.array(WebhookItemSchema).optional(),
+});
 
 const handler = async (req: Request): Promise<Response> => {
   console.log('InfinitePay webhook received');
@@ -35,36 +42,38 @@ const handler = async (req: Request): Promise<Response> => {
     
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
-    const payload: WebhookPayload = await req.json();
-    console.log('Webhook payload:', JSON.stringify(payload));
-
     // =======================================================
-    // SECURITY VALIDATIONS
+    // INPUT VALIDATION WITH ZOD
     // =======================================================
     
-    // Validate required fields are present
-    if (!payload.order_nsu || !payload.transaction_nsu) {
-      console.error('Missing required fields in webhook payload');
+    let rawPayload: unknown;
+    try {
+      rawPayload = await req.json();
+    } catch {
+      console.error('Invalid JSON in webhook payload');
       return new Response(
-        JSON.stringify({ success: false, error: 'Payload inválido' }),
+        JSON.stringify({ success: false, error: 'JSON inválido' }),
         { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
 
-    // Validate amount is positive
-    if (!payload.paid_amount || payload.paid_amount <= 0) {
-      console.error('Invalid payment amount:', payload.paid_amount);
+    console.log('Raw webhook payload received');
+
+    const parseResult = WebhookPayloadSchema.safeParse(rawPayload);
+    
+    if (!parseResult.success) {
+      console.error('Webhook validation error:', parseResult.error.issues);
+      const firstError = parseResult.error.issues[0]?.message || 'Payload inválido';
       return new Response(
-        JSON.stringify({ success: false, error: 'Valor de pagamento inválido' }),
+        JSON.stringify({ success: false, error: firstError }),
         { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
 
+    const payload = parseResult.data;
     console.log(`Payment confirmed for order ${payload.order_nsu}`);
     console.log(`Amount: ${payload.paid_amount / 100} BRL`);
-    console.log(`Method: ${payload.capture_method}`);
     console.log(`Transaction NSU: ${payload.transaction_nsu}`);
-    console.log(`Receipt URL: ${payload.receipt_url}`);
 
     // Find the order by order_nsu
     const { data: order, error: orderError } = await supabase
@@ -129,7 +138,7 @@ const handler = async (req: Request): Promise<Response> => {
       .update({
         status: 'paid',
         transaction_nsu: payload.transaction_nsu,
-        receipt_url: payload.receipt_url,
+        receipt_url: payload.receipt_url || null,
         paid_at: new Date().toISOString(),
       })
       .eq('id', order.id);
@@ -237,10 +246,9 @@ const handler = async (req: Request): Promise<Response> => {
 
   } catch (error: unknown) {
     console.error('Error in infinitepay-webhook function:', error);
-    const errorMessage = error instanceof Error ? error.message : 'Erro interno';
     
     return new Response(
-      JSON.stringify({ success: false, error: errorMessage }),
+      JSON.stringify({ success: false, error: 'Erro interno' }),
       { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
   }
