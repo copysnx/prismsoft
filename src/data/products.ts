@@ -44,6 +44,7 @@ export const products: Product[] = [
       "Suporte 24/7"
     ],
     variations: [
+      { id: "diario", name: "Diário", price: 9.90, originalPrice: 14.90, stock: 100 },
       { id: "7-dias", name: "7 Dias", price: 29.90, originalPrice: 49.90, stock: 50 },
       { id: "30-dias", name: "30 Dias", price: 49.90, originalPrice: 89.90, stock: 50 },
       { id: "lifetime", name: "Lifetime", price: 149.90, originalPrice: 299.90, stock: 20 },
@@ -66,6 +67,7 @@ export const products: Product[] = [
       "Anti-ban integrado"
     ],
     variations: [
+      { id: "diario", name: "Diário", price: 7.90, originalPrice: 12.90, stock: 100 },
       { id: "7-dias", name: "7 Dias", price: 24.90, originalPrice: 39.90, stock: 50 },
       { id: "30-dias", name: "30 Dias", price: 39.90, originalPrice: 79.90, stock: 50 },
       { id: "lifetime", name: "Lifetime", price: 119.90, originalPrice: 199.90, stock: 20 },
@@ -88,6 +90,7 @@ export const products: Product[] = [
       "Garantia de funcionamento"
     ],
     variations: [
+      { id: "diario", name: "Diário", price: 5.90, originalPrice: 9.90, stock: 100 },
       { id: "single", name: "Licença Única", price: 29.90, originalPrice: 59.90, stock: 100 },
       { id: "lifetime", name: "Lifetime + Updates", price: 59.90, originalPrice: 99.90, stock: 50 },
     ]
@@ -109,6 +112,7 @@ export const products: Product[] = [
       "Suporte técnico incluso"
     ],
     variations: [
+      { id: "diario", name: "Diário", price: 6.90, originalPrice: 11.90, stock: 100 },
       { id: "7-dias", name: "7 Dias", price: 19.90, originalPrice: 34.90, stock: 50 },
       { id: "30-dias", name: "30 Dias", price: 34.90, originalPrice: 69.90, stock: 50 },
       { id: "lifetime", name: "Lifetime", price: 99.90, originalPrice: 149.90, stock: 20 },
@@ -131,6 +135,7 @@ export const products: Product[] = [
       "Atualizações gratuitas"
     ],
     variations: [
+      { id: "diario", name: "Diário", price: 8.90, originalPrice: 14.90, stock: 100 },
       { id: "7-dias", name: "7 Dias", price: 29.90, originalPrice: 49.90, stock: 50 },
       { id: "30-dias", name: "30 Dias", price: 44.90, originalPrice: 99.90, stock: 50 },
       { id: "lifetime", name: "Lifetime", price: 129.90, originalPrice: 249.90, stock: 20 },
