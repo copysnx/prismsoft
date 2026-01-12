@@ -190,6 +190,38 @@ const handler = async (req: Request): Promise<Response> => {
 
       const now = new Date();
 
+      // Validate coupon role restriction
+      if (coupon.restricted_to_role) {
+        if (!body.userId) {
+          return new Response(
+            JSON.stringify({ success: false, error: 'Faça login para usar este cupom' }),
+            { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+          );
+        }
+
+        const { data: userRole } = await supabase
+          .from('user_roles')
+          .select('role')
+          .eq('user_id', body.userId)
+          .eq('role', coupon.restricted_to_role)
+          .single();
+
+        if (!userRole) {
+          const roleNames: Record<string, string> = {
+            'admin': 'administradores',
+            'reseller': 'revendedores',
+            'user': 'usuários'
+          };
+          return new Response(
+            JSON.stringify({ 
+              success: false, 
+              error: `Este cupom é exclusivo para ${roleNames[coupon.restricted_to_role] || coupon.restricted_to_role}` 
+            }),
+            { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+          );
+        }
+      }
+
       // Validate coupon dates
       if (coupon.valid_from && new Date(coupon.valid_from) > now) {
         return new Response(

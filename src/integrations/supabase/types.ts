@@ -68,6 +68,7 @@ export type Database = {
           is_active: boolean | null
           max_uses: number | null
           min_purchase: number | null
+          restricted_to_role: Database["public"]["Enums"]["app_role"] | null
           updated_at: string
           valid_from: string | null
           valid_until: string | null
@@ -83,6 +84,7 @@ export type Database = {
           is_active?: boolean | null
           max_uses?: number | null
           min_purchase?: number | null
+          restricted_to_role?: Database["public"]["Enums"]["app_role"] | null
           updated_at?: string
           valid_from?: string | null
           valid_until?: string | null
@@ -98,6 +100,7 @@ export type Database = {
           is_active?: boolean | null
           max_uses?: number | null
           min_purchase?: number | null
+          restricted_to_role?: Database["public"]["Enums"]["app_role"] | null
           updated_at?: string
           valid_from?: string | null
           valid_until?: string | null
