@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Search, User, ShoppingCart, LogOut, Shield, ShoppingBag } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -6,6 +6,7 @@ import { useNavigate, Link } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
 import { useAdmin } from "@/hooks/useAdmin";
 import { useCart } from "@/hooks/useCart";
+import { supabase } from "@/integrations/supabase/client";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuSeparator } from "@/components/ui/dropdown-menu";
 import CartSidebar from "@/components/CartSidebar";
 
@@ -15,6 +16,32 @@ const Header = () => {
   const { isAdmin } = useAdmin();
   const { totalItems } = useCart();
   const [cartOpen, setCartOpen] = useState(false);
+  const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
+
+  useEffect(() => {
+    const fetchAvatar = async () => {
+      if (!user) {
+        setAvatarUrl(null);
+        return;
+      }
+
+      try {
+        const { data, error } = await supabase
+          .from("profiles")
+          .select("avatar_url")
+          .eq("id", user.id)
+          .maybeSingle();
+
+        if (!error && data?.avatar_url) {
+          setAvatarUrl(data.avatar_url);
+        }
+      } catch (error) {
+        console.error("Error fetching avatar:", error);
+      }
+    };
+
+    fetchAvatar();
+  }, [user]);
 
   const handleSignOut = async () => {
     await signOut();
@@ -47,10 +74,18 @@ const Header = () => {
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
                   <Button variant="ghost" size="icon" className="relative">
-                    <div className="flex h-8 w-8 items-center justify-center rounded-full bg-gradient-to-br from-purple-500 to-fuchsia-500">
-                      <span className="text-sm font-bold text-white">
-                        {user.email?.charAt(0).toUpperCase()}
-                      </span>
+                    <div className="flex h-8 w-8 items-center justify-center rounded-full bg-gradient-to-br from-purple-500 to-fuchsia-500 overflow-hidden">
+                      {avatarUrl ? (
+                        <img
+                          src={avatarUrl}
+                          alt="Avatar"
+                          className="h-full w-full object-cover"
+                        />
+                      ) : (
+                        <span className="text-sm font-bold text-white">
+                          {user.email?.charAt(0).toUpperCase()}
+                        </span>
+                      )}
                     </div>
                   </Button>
                 </DropdownMenuTrigger>
