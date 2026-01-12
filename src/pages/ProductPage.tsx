@@ -1,30 +1,88 @@
 import { useParams, useNavigate, useSearchParams } from "react-router-dom";
 import { useState, useEffect } from "react";
-import { ShoppingCart, Zap, Shield, CreditCard, MessageCircle, ArrowLeft, Check } from "lucide-react";
+import { ShoppingCart, Zap, Shield, CreditCard, MessageCircle, ArrowLeft, Check, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
-import { getProductBySlug, Product, ProductVariation } from "@/data/products";
 import { useCart } from "@/hooks/useCart";
 import { useToast } from "@/hooks/use-toast";
+import { supabase } from "@/integrations/supabase/client";
+
+interface ProductVariation {
+  id: string;
+  name: string;
+  price: number;
+  originalPrice?: number;
+  stock: number;
+}
+
+interface Product {
+  id: string;
+  slug: string;
+  name: string;
+  description: string | null;
+  category: string;
+  image_url: string | null;
+  rating: number;
+  features: string[];
+  variations: ProductVariation[];
+  is_active: boolean;
+}
 
 const ProductPage = () => {
   const { slug } = useParams<{ slug: string }>();
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
-  const product = getProductBySlug(slug || "");
   const { addItem } = useCart();
   const { toast } = useToast();
   
+  const [product, setProduct] = useState<Product | null>(null);
+  const [loading, setLoading] = useState(true);
   const [selectedVariation, setSelectedVariation] = useState<ProductVariation | null>(null);
 
   useEffect(() => {
-    if (product?.variations && product.variations.length > 0) {
-      const variationParam = searchParams.get("variation");
-      const found = product.variations.find(v => v.id === variationParam);
-      setSelectedVariation(found || product.variations[0]);
-    }
-  }, [product, searchParams]);
+    const fetchProduct = async () => {
+      if (!slug) {
+        setLoading(false);
+        return;
+      }
+
+      try {
+        const { data, error } = await supabase
+          .from('products')
+          .select('*')
+          .eq('slug', slug)
+          .eq('is_active', true)
+          .single();
+
+        if (error || !data) {
+          console.error('Error fetching product:', error);
+          setProduct(null);
+        } else {
+          const parsedProduct: Product = {
+            ...data,
+            variations: (Array.isArray(data.variations) ? data.variations : []) as unknown as ProductVariation[],
+            features: data.features || [],
+          };
+          setProduct(parsedProduct);
+
+          // Set initial variation
+          if (parsedProduct.variations.length > 0) {
+            const variationParam = searchParams.get("variation");
+            const found = parsedProduct.variations.find(v => v.id === variationParam);
+            setSelectedVariation(found || parsedProduct.variations[0]);
+          }
+        }
+      } catch (error) {
+        console.error('Error:', error);
+        setProduct(null);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchProduct();
+  }, [slug, searchParams]);
 
   const handleVariationChange = (variation: ProductVariation) => {
     setSelectedVariation(variation);
@@ -35,10 +93,10 @@ const ProductPage = () => {
     if (!product || !selectedVariation) return;
     
     addItem({
-      productId: String(product.id),
+      productId: product.id, // Now using UUID from database
       productSlug: product.slug,
       productName: product.name,
-      productImage: product.image,
+      productImage: product.image_url || '/placeholder.svg',
       variationId: selectedVariation.id,
       variationName: selectedVariation.name,
       price: selectedVariation.price,
@@ -55,6 +113,18 @@ const ProductPage = () => {
     handleAddToCart();
     navigate('/checkout');
   };
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-background flex flex-col">
+        <Header />
+        <div className="flex-1 flex items-center justify-center">
+          <Loader2 className="h-8 w-8 animate-spin text-purple-500" />
+        </div>
+        <Footer />
+      </div>
+    );
+  }
 
   if (!product) {
     return (
@@ -73,8 +143,8 @@ const ProductPage = () => {
     );
   }
 
-  const currentPrice = selectedVariation?.price || product.price;
-  const currentOriginalPrice = selectedVariation?.originalPrice || product.originalPrice;
+  const currentPrice = selectedVariation?.price || 0;
+  const currentOriginalPrice = selectedVariation?.originalPrice;
   const discount = currentOriginalPrice 
     ? Math.round((1 - currentPrice / currentOriginalPrice) * 100)
     : 0;
@@ -99,7 +169,7 @@ const ProductPage = () => {
             <div className="lg:col-span-4">
               <div className="relative rounded-2xl overflow-hidden border border-border bg-card">
                 <img
-                  src={product.image}
+                  src={product.image_url || '/placeholder.svg'}
                   alt={product.name}
                   className="w-full aspect-square object-cover"
                 />
