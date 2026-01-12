@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Search, User, ShoppingCart, LogOut, Shield } from "lucide-react";
+import { Search, User, ShoppingCart, LogOut, Shield, ShoppingBag } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useNavigate, Link } from "react-router-dom";
@@ -62,6 +62,10 @@ const Header = () => {
                   <DropdownMenuItem onClick={() => navigate("/profile")} className="cursor-pointer">
                     <User className="mr-2 h-4 w-4" />
                     Meu Perfil
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => navigate("/compras")} className="cursor-pointer">
+                    <ShoppingBag className="mr-2 h-4 w-4" />
+                    Suas Compras
                   </DropdownMenuItem>
                   {isAdmin && (
                     <>
