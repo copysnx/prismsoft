@@ -9,6 +9,7 @@ import Index from "./pages/Index";
 import ProductPage from "./pages/ProductPage";
 import CheckoutPage from "./pages/CheckoutPage";
 import PaymentPage from "./pages/PaymentPage";
+import PaymentSuccessPage from "./pages/PaymentSuccessPage";
 import TermsPage from "./pages/TermsPage";
 import AuthPage from "./pages/AuthPage";
 import ForgotPasswordPage from "./pages/ForgotPasswordPage";
@@ -19,7 +20,6 @@ import AdminProducts from "./pages/admin/AdminProducts";
 import AdminStock from "./pages/admin/AdminStock";
 import AdminKeys from "./pages/admin/AdminKeys";
 import NotFound from "./pages/NotFound";
-
 const queryClient = new QueryClient();
 
 const App = () => (
@@ -38,6 +38,7 @@ const App = () => (
               <Route path="/profile" element={<ProfilePage />} />
               <Route path="/checkout" element={<CheckoutPage />} />
               <Route path="/pagamento" element={<PaymentPage />} />
+              <Route path="/pagamento/sucesso" element={<PaymentSuccessPage />} />
               <Route path="/termos" element={<TermsPage />} />
               <Route path="/admin" element={<AdminDashboard />} />
               <Route path="/admin/products" element={<AdminProducts />} />
