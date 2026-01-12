@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
-import { ArrowLeft, User, Camera, Save, Loader2 } from "lucide-react";
+import { ArrowLeft, User, Camera, Save, Loader2, ShoppingBag } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -258,6 +258,17 @@ const ProfilePage = () => {
                     Salvar alterações
                   </>
                 )}
+              </Button>
+
+              {/* Link to Purchases */}
+              <Button
+                variant="outline"
+                size="lg"
+                className="w-full gap-2 mt-4"
+                onClick={() => navigate("/compras")}
+              >
+                <ShoppingBag className="h-4 w-4" />
+                Ver Suas Compras
               </Button>
             </div>
           </div>
