@@ -11,6 +11,9 @@ import { supabase } from '@/integrations/supabase/client';
 import Header from '@/components/Header';
 import Footer from '@/components/Footer';
 
+const isUuid = (value: string) =>
+  /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(value);
+
 const CheckoutPage = () => {
   const navigate = useNavigate();
   const { items, removeItem, updateQuantity, subtotal, discount, total, couponCode, appliedCoupon, applyCoupon, removeCoupon, clearCart, isValidatingCoupon } = useCart();
@@ -82,15 +85,54 @@ const CheckoutPage = () => {
       const orderNsu = `ORDER-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
       
       // Create order first to check stock and reserve
-      const cartItems = items.map(item => ({
-        productId: item.productId,
-        productName: item.productName,
-        productImage: item.productImage,
-        variationId: item.variationId,
-        variationName: item.variationName,
-        price: item.price,
-        quantity: item.quantity,
-      }));
+      // (supports legacy carts that stored numeric productId)
+      const invalidItems = items.filter((i) => !isUuid(i.productId));
+      let slugToDbId = new Map<string, string>();
+
+      if (invalidItems.length > 0) {
+        const slugs = Array.from(
+          new Set(invalidItems.map((i) => i.productSlug).filter(Boolean))
+        );
+
+        if (slugs.length > 0) {
+          const { data: productsData, error: productsError } = await supabase
+            .from("products")
+            .select("id, slug")
+            .in("slug", slugs);
+
+          if (productsError) throw productsError;
+
+          (productsData || []).forEach((p) => {
+            slugToDbId.set(p.slug, p.id);
+          });
+        }
+      }
+
+      const cartItems = items.map((item) => {
+        const resolvedProductId = isUuid(item.productId)
+          ? item.productId
+          : slugToDbId.get(item.productSlug) || item.productId;
+
+        return {
+          productId: resolvedProductId,
+          productName: item.productName,
+          productImage: item.productImage,
+          variationId: item.variationId,
+          variationName: item.variationName,
+          price: item.price,
+          quantity: item.quantity,
+        };
+      });
+
+      const stillInvalid = cartItems.find((i) => !isUuid(i.productId));
+      if (stillInvalid) {
+        toast({
+          title: "Produto inválido no carrinho",
+          description: "Remova o item do carrinho e adicione novamente.",
+          variant: "destructive",
+        });
+        return;
+      }
 
       const { data: orderData, error: orderError } = await supabase.functions.invoke('create-order', {
         body: {

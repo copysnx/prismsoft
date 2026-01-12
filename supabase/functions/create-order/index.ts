@@ -30,6 +30,9 @@ interface CreateOrderRequest {
   userId?: string;
 }
 
+const isUuid = (value: string) =>
+  /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(value);
+
 const handler = async (req: Request): Promise<Response> => {
   console.log('Create order request received');
   
@@ -62,6 +65,18 @@ const handler = async (req: Request): Promise<Response> => {
 
     // Check stock availability for all items
     for (const item of body.items) {
+      if (!isUuid(item.productId)) {
+        console.error('Invalid productId received:', item.productId);
+        return new Response(
+          JSON.stringify({
+            success: false,
+            error: 'Produto inválido no carrinho. Remova e adicione novamente.',
+            invalidProductId: item.productId,
+          }),
+          { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+
       const { data: availableKeys, error } = await supabase
         .from('product_keys')
         .select('id')
@@ -80,8 +95,8 @@ const handler = async (req: Request): Promise<Response> => {
       const availableCount = availableKeys?.length || 0;
       if (availableCount < item.quantity) {
         return new Response(
-          JSON.stringify({ 
-            success: false, 
+          JSON.stringify({
+            success: false,
             error: `Estoque insuficiente para ${item.productName} - ${item.variationName}. Disponível: ${availableCount}`,
             stockError: true,
             productId: item.productId,
