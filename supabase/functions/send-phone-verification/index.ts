@@ -135,8 +135,9 @@ const handler = async (req: Request): Promise<Response> => {
         api_key: vonageApiKey,
         api_secret: vonageApiSecret,
         to: formattedPhone,
-        from: "PRISM",
-        text: `Seu código de verificação é: ${code}. Válido por 10 minutos.`,
+        from: "Vonage",
+        text: `Codigo de verificacao: ${code}`,
+        type: "text",
       }),
     });
 
