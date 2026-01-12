@@ -221,9 +221,9 @@ const CheckoutPage = () => {
                 />
                 <span className="text-sm text-muted-foreground">
                   Eu aceito os{' '}
-                  <Link to="/terms" className="text-primary hover:underline">
+                  <a href="https://prismcheats.shop/termos" target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">
                     termos e condições
-                  </Link>
+                  </a>
                   {' '}desta compra.
                 </span>
               </label>
