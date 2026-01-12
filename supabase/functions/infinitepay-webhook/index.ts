@@ -8,6 +8,48 @@ const corsHeaders = {
 };
 
 // =======================================================
+// INFINITEPAY IP ALLOWLIST (Production IPs)
+// Reference: InfinitePay webhook documentation
+// =======================================================
+const INFINITEPAY_ALLOWED_IPS = [
+  // InfinitePay production webhook IPs - update as needed
+  '18.230.0.0/16',     // AWS São Paulo region (InfinitePay infrastructure)
+  '52.67.0.0/16',      // AWS São Paulo region
+  '54.232.0.0/16',     // AWS São Paulo region
+  '177.71.128.0/17',   // CloudFlare Brazil
+];
+
+// Check if IP is in CIDR range
+function ipInCIDR(ip: string, cidr: string): boolean {
+  const [range, bits = '32'] = cidr.split('/');
+  const mask = ~(2 ** (32 - parseInt(bits)) - 1);
+  
+  const ipParts = ip.split('.').map(Number);
+  const rangeParts = range.split('.').map(Number);
+  
+  const ipNum = (ipParts[0] << 24) | (ipParts[1] << 16) | (ipParts[2] << 8) | ipParts[3];
+  const rangeNum = (rangeParts[0] << 24) | (rangeParts[1] << 16) | (rangeParts[2] << 8) | rangeParts[3];
+  
+  return (ipNum & mask) === (rangeNum & mask);
+}
+
+function isAllowedIP(ip: string): boolean {
+  // In development/testing, allow all
+  const allowAllIPs = Deno.env.get('ALLOW_ALL_WEBHOOK_IPS') === 'true';
+  if (allowAllIPs) {
+    console.log('IP allowlist disabled for testing');
+    return true;
+  }
+  
+  for (const cidr of INFINITEPAY_ALLOWED_IPS) {
+    if (ipInCIDR(ip, cidr)) {
+      return true;
+    }
+  }
+  return false;
+}
+
+// =======================================================
 // INPUT VALIDATION SCHEMA
 // =======================================================
 
@@ -29,6 +71,29 @@ const WebhookPayloadSchema = z.object({
   items: z.array(WebhookItemSchema).optional(),
 });
 
+// Rate limiting storage (in-memory, resets on function restart)
+const webhookAttempts = new Map<string, { count: number; firstAttempt: number }>();
+const RATE_LIMIT_WINDOW = 60 * 1000; // 1 minute
+const RATE_LIMIT_MAX = 10; // Max 10 attempts per order_nsu per minute
+
+function checkRateLimit(orderNsu: string): boolean {
+  const now = Date.now();
+  const attempts = webhookAttempts.get(orderNsu);
+  
+  if (!attempts || (now - attempts.firstAttempt > RATE_LIMIT_WINDOW)) {
+    webhookAttempts.set(orderNsu, { count: 1, firstAttempt: now });
+    return true;
+  }
+  
+  if (attempts.count >= RATE_LIMIT_MAX) {
+    console.warn(`Rate limit exceeded for order_nsu: ${orderNsu}`);
+    return false;
+  }
+  
+  attempts.count++;
+  return true;
+}
+
 const handler = async (req: Request): Promise<Response> => {
   console.log('InfinitePay webhook received');
   
@@ -37,6 +102,24 @@ const handler = async (req: Request): Promise<Response> => {
   }
 
   try {
+    // =======================================================
+    // SECURITY: IP Allowlist Validation
+    // =======================================================
+    
+    const clientIP = req.headers.get('x-forwarded-for')?.split(',')[0]?.trim() 
+      || req.headers.get('x-real-ip') 
+      || 'unknown';
+    
+    console.log(`Webhook request from IP: ${clientIP}`);
+    
+    if (!isAllowedIP(clientIP)) {
+      console.error(`Blocked webhook from unauthorized IP: ${clientIP}`);
+      return new Response(
+        JSON.stringify({ success: false, error: 'Acesso não autorizado' }),
+        { status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
     const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
     const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
     
@@ -70,7 +153,19 @@ const handler = async (req: Request): Promise<Response> => {
       );
     }
 
+    // =======================================================
+    // SECURITY: Rate Limiting
+    // =======================================================
+    
     const payload = parseResult.data;
+    
+    if (!checkRateLimit(payload.order_nsu)) {
+      return new Response(
+        JSON.stringify({ success: false, error: 'Muitas tentativas. Tente novamente mais tarde.' }),
+        { status: 429, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
     console.log(`Payment confirmed for order ${payload.order_nsu}`);
     console.log(`Amount: ${payload.paid_amount / 100} BRL`);
     console.log(`Transaction NSU: ${payload.transaction_nsu}`);
