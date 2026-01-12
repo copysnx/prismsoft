@@ -1,6 +1,6 @@
 import { useEffect } from "react";
 import { useNavigate, Link } from "react-router-dom";
-import { Package, Users, BarChart3, ArrowLeft, Key, Tag } from "lucide-react";
+import { Users, BarChart3, ArrowLeft, Key, Tag } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { useAdmin } from "@/hooks/useAdmin";
 import { Button } from "@/components/ui/button";
@@ -35,13 +35,6 @@ const AdminDashboard = () => {
   }
 
   const menuItems = [
-    {
-      title: "Produtos",
-      description: "Gerenciar produtos e catálogo",
-      icon: Package,
-      href: "/admin/products",
-      color: "from-purple-500 to-fuchsia-500",
-    },
     {
       title: "Keys & Estoque",
       description: "Gerenciar licenças e estoque",
