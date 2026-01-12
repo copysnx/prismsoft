@@ -90,7 +90,7 @@ const Header = () => {
                     <User className="mr-2 h-4 w-4" />
                     Meu Perfil
                   </DropdownMenuItem>
-                  <DropdownMenuItem onClick={() => navigate("/compras")} className="cursor-pointer">
+                  <DropdownMenuItem onClick={() => navigate("/profile?tab=products")} className="cursor-pointer">
                     <ShoppingBag className="mr-2 h-4 w-4" />
                     Suas Compras
                   </DropdownMenuItem>

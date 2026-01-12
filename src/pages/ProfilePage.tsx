@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from "react";
-import { useNavigate } from "react-router-dom";
-import { 
+import { useNavigate, useSearchParams } from "react-router-dom";
+import {
   User, 
   Camera, 
   Save, 
@@ -30,6 +30,8 @@ import TutorialContent from "@/components/profile/TutorialContent";
 const ProfilePage = () => {
   const { user, loading: authLoading } = useAuth();
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  const tabFromUrl = searchParams.get("tab") || "profile";
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const [fullName, setFullName] = useState("");
@@ -273,7 +275,7 @@ const ProfilePage = () => {
           </div>
 
           {/* Tabs Navigation */}
-          <Tabs defaultValue="profile" className="w-full">
+          <Tabs defaultValue={tabFromUrl} className="w-full">
             <TabsList className="mb-8 bg-card/50 border border-border p-1 rounded-full inline-flex">
               <TabsTrigger 
                 value="products" 
