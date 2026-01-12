@@ -432,7 +432,22 @@ export type Database = {
       }
     }
     Views: {
-      [_ in never]: never
+      product_stock_view: {
+        Row: {
+          available_count: number | null
+          product_id: string | null
+          variation_id: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "product_keys_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "products"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Functions: {
       has_role: {
