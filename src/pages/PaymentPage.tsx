@@ -1,12 +1,13 @@
 import { useState, useEffect } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
-import { Copy, Check, Clock, RefreshCw, ArrowLeft, CheckCircle, XCircle, Smartphone, QrCode, Sparkles, ShieldCheck } from 'lucide-react';
+import { Copy, Check, Clock, RefreshCw, ArrowLeft, CheckCircle, XCircle, Smartphone, QrCode, Sparkles, ShieldCheck, PartyPopper, Gift } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import Header from '@/components/Header';
 import Footer from '@/components/Footer';
 import BackButton from '@/components/BackButton';
+import cloveImage from '@/assets/clove-valorant.png';
 
 interface PaymentData {
   id: string;
@@ -256,28 +257,78 @@ const PaymentPage = () => {
 
           {/* Payment Status - Paid */}
           {paymentStatus === 'paid' && (
-            <div className="relative bg-card border border-green-500/30 rounded-3xl p-10 text-center overflow-hidden">
-              {/* Background glow */}
-              <div className="absolute inset-0 bg-gradient-to-b from-green-500/10 to-transparent pointer-events-none" />
+            <div className="relative bg-card border border-green-500/30 rounded-3xl overflow-hidden">
+              {/* Background with gradient and glow effects */}
+              <div className="absolute inset-0 bg-gradient-to-br from-green-500/10 via-emerald-500/5 to-purple-500/10 pointer-events-none" />
+              <div className="absolute top-0 left-1/2 -translate-x-1/2 w-96 h-96 bg-green-500/20 rounded-full blur-3xl pointer-events-none" />
               
-              {/* Animated success icon */}
-              <div className="relative w-24 h-24 mx-auto mb-6">
-                <div className="absolute inset-0 bg-green-500/20 rounded-full animate-ping" style={{ animationDuration: '2s' }} />
-                <div className="relative w-24 h-24 bg-gradient-to-br from-green-400 to-green-600 rounded-full flex items-center justify-center shadow-lg shadow-green-500/30">
-                  <CheckCircle className="h-12 w-12 text-white" />
+              {/* Confetti-like particles */}
+              <div className="absolute inset-0 overflow-hidden pointer-events-none">
+                {[...Array(12)].map((_, i) => (
+                  <div 
+                    key={i}
+                    className="absolute w-2 h-2 rounded-full animate-pulse"
+                    style={{
+                      background: i % 3 === 0 ? '#22c55e' : i % 3 === 1 ? '#a855f7' : '#fbbf24',
+                      top: `${Math.random() * 100}%`,
+                      left: `${Math.random() * 100}%`,
+                      animationDelay: `${i * 0.2}s`,
+                      opacity: 0.6
+                    }}
+                  />
+                ))}
+              </div>
+              
+              {/* Header with celebration */}
+              <div className="relative bg-gradient-to-r from-green-600 via-emerald-500 to-green-600 p-6">
+                <div className="absolute inset-0 bg-[url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNDAiIGhlaWdodD0iNDAiIHZpZXdCb3g9IjAgMCA0MCA0MCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48ZyBmaWxsPSJub25lIiBmaWxsLXJ1bGU9ImV2ZW5vZGQiPjxjaXJjbGUgZmlsbD0icmdiYSgyNTUsMjU1LDI1NSwwLjEpIiBjeD0iMjAiIGN5PSIyMCIgcj0iMiIvPjwvZz48L3N2Zz4=')] opacity-30" />
+                <div className="relative flex items-center justify-center gap-3">
+                  <PartyPopper className="h-7 w-7 text-yellow-300 animate-bounce" />
+                  <h2 className="text-xl font-bold text-white">Compra Realizada!</h2>
+                  <PartyPopper className="h-7 w-7 text-yellow-300 animate-bounce" style={{ animationDelay: '0.2s' }} />
                 </div>
               </div>
               
-              <h1 className="text-3xl font-bold mb-3 bg-gradient-to-r from-green-400 to-emerald-500 bg-clip-text text-transparent">
-                Pagamento Confirmado!
-              </h1>
-              <p className="text-muted-foreground mb-8 text-lg">
-                Seu pagamento foi processado com sucesso. Você receberá seu produto por email.
-              </p>
-              <Button onClick={() => navigate('/')} variant="hero" size="lg" className="px-8">
-                <Sparkles className="h-5 w-5 mr-2" />
-                Voltar à loja
-              </Button>
+              {/* Content */}
+              <div className="relative p-8 flex flex-col items-center">
+                {/* Character Image with glow */}
+                <div className="relative mb-6 group">
+                  <div className="absolute -inset-4 bg-gradient-to-r from-green-500/30 via-emerald-500/30 to-purple-500/30 rounded-full blur-2xl opacity-60 group-hover:opacity-80 transition-opacity animate-pulse" style={{ animationDuration: '3s' }} />
+                  <div className="relative">
+                    <img 
+                      src={cloveImage} 
+                      alt="Clove Valorant" 
+                      className="h-56 w-auto object-contain drop-shadow-2xl transform hover:scale-105 transition-transform duration-500"
+                    />
+                    {/* Success badge */}
+                    <div className="absolute -bottom-2 -right-2 w-14 h-14 bg-gradient-to-br from-green-400 to-green-600 rounded-full flex items-center justify-center shadow-lg shadow-green-500/40 border-4 border-card">
+                      <CheckCircle className="h-7 w-7 text-white" />
+                    </div>
+                  </div>
+                </div>
+                
+                {/* Success message */}
+                <div className="text-center mb-6">
+                  <h1 className="text-3xl font-bold mb-3 bg-gradient-to-r from-green-400 via-emerald-400 to-green-500 bg-clip-text text-transparent">
+                    Pagamento Confirmado!
+                  </h1>
+                  <p className="text-muted-foreground text-lg max-w-sm">
+                    Seu pagamento foi processado com sucesso. Você receberá seu produto por email.
+                  </p>
+                </div>
+                
+                {/* Gift icon indicator */}
+                <div className="flex items-center gap-3 px-5 py-3 rounded-2xl bg-gradient-to-r from-purple-500/10 via-green-500/10 to-purple-500/10 border border-green-500/20 mb-6">
+                  <Gift className="h-5 w-5 text-green-400" />
+                  <span className="text-sm text-muted-foreground">Seu produto será enviado em instantes</span>
+                </div>
+                
+                {/* Action button */}
+                <Button onClick={() => navigate('/')} variant="hero" size="lg" className="px-10 h-14 text-base font-semibold">
+                  <Sparkles className="h-5 w-5 mr-2" />
+                  Voltar à loja
+                </Button>
+              </div>
             </div>
           )}
 
