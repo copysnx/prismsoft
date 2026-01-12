@@ -2,6 +2,7 @@ import { Link } from 'react-router-dom';
 import { ChevronRight, FileText, Shield, CreditCard, AlertTriangle, RefreshCw, Scale } from 'lucide-react';
 import Header from '@/components/Header';
 import Footer from '@/components/Footer';
+import BackButton from '@/components/BackButton';
 
 const TermsPage = () => {
   return (
@@ -9,6 +10,11 @@ const TermsPage = () => {
       <Header />
       
       <main className="container mx-auto px-4 py-8 pt-24">
+        {/* Back Button */}
+        <div className="mb-6">
+          <BackButton to="/" />
+        </div>
+
         {/* Breadcrumb */}
         <div className="flex items-center gap-2 text-sm text-muted-foreground mb-8">
           <Link to="/" className="hover:text-foreground transition-colors">Início</Link>
