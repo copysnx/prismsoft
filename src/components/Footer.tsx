@@ -39,7 +39,7 @@ const Footer = () => {
 
         {/* Bottom Bar */}
         <div className="mt-12 border-t border-border pt-6 text-center text-sm text-muted-foreground">
-          <p>© 2025 NexTSysteM. Todos os direitos reservados.</p>
+          <p>© 2024 Prism SysteM. Todos os direitos reservados.</p>
         </div>
       </div>
     </footer>;
