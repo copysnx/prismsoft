@@ -89,7 +89,7 @@ export const products: Product[] = [
       "Garantia de funcionamento"
     ],
     variations: [
-      { id: "diario", name: "Diário", price: 5.90, originalPrice: 9.90, stock: 100 },
+      { id: "diario", name: "Diário", price: 9.90, originalPrice: 14.90, stock: 100 },
       { id: "single", name: "Licença Única", price: 29.90, originalPrice: 59.90, stock: 100 },
       { id: "lifetime", name: "Lifetime + Updates", price: 59.90, originalPrice: 99.90, stock: 50 },
     ]
