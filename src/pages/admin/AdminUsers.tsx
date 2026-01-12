@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { ArrowLeft, Users, Shield, ShieldCheck, Search, RefreshCw, ChevronLeft, ChevronRight, Calendar, Store, UserCog, X } from "lucide-react";
+import { ArrowLeft, Users, Shield, ShieldCheck, Search, RefreshCw, ChevronLeft, ChevronRight, Calendar, Store, UserCog, X, Trash2 } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { useAdmin } from "@/hooks/useAdmin";
 import { Button } from "@/components/ui/button";
@@ -16,6 +16,16 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 
 type AppRole = 'admin' | 'user' | 'reseller';
 
@@ -57,6 +67,9 @@ const AdminUsers = () => {
   const [selectedUser, setSelectedUser] = useState<UserWithRoles | null>(null);
   const [isRoleDialogOpen, setIsRoleDialogOpen] = useState(false);
   const [updatingRole, setUpdatingRole] = useState(false);
+  const [userToDelete, setUserToDelete] = useState<UserWithRoles | null>(null);
+  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
+  const [deleting, setDeleting] = useState(false);
   const itemsPerPage = 10;
 
   useEffect(() => {
@@ -245,6 +258,56 @@ const AdminUsers = () => {
   const openRoleDialog = (userToEdit: UserWithRoles) => {
     setSelectedUser(userToEdit);
     setIsRoleDialogOpen(true);
+  };
+
+  const openDeleteDialog = (userToDelete: UserWithRoles) => {
+    setUserToDelete(userToDelete);
+    setIsDeleteDialogOpen(true);
+  };
+
+  const deleteUser = async () => {
+    if (!userToDelete) return;
+
+    // Prevent self-deletion
+    if (userToDelete.id === user?.id) {
+      toast({
+        title: "Ação não permitida",
+        description: "Você não pode excluir sua própria conta.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setDeleting(true);
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      
+      const response = await supabase.functions.invoke('delete-user', {
+        body: { userId: userToDelete.id },
+      });
+
+      if (response.error) {
+        throw new Error(response.error.message);
+      }
+
+      toast({
+        title: "Usuário excluído",
+        description: `O usuário ${userToDelete.full_name || 'sem nome'} foi excluído com sucesso.`,
+      });
+
+      setIsDeleteDialogOpen(false);
+      setUserToDelete(null);
+      await fetchUsers();
+    } catch (error) {
+      console.error('Error deleting user:', error);
+      toast({
+        title: "Erro ao excluir usuário",
+        description: "Tente novamente mais tarde.",
+        variant: "destructive",
+      });
+    } finally {
+      setDeleting(false);
+    }
   };
 
   const filteredUsers = users.filter(u => {
@@ -468,15 +531,26 @@ const AdminUsers = () => {
                           </div>
                         </td>
                         <td className="px-4 py-3">
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() => openRoleDialog(u)}
-                            className="border-purple-500/30 text-purple-400 hover:bg-purple-500/10"
-                          >
-                            <UserCog className="h-4 w-4 mr-1" />
-                            Gerenciar
-                          </Button>
+                          <div className="flex items-center gap-2">
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => openRoleDialog(u)}
+                              className="border-purple-500/30 text-purple-400 hover:bg-purple-500/10"
+                            >
+                              <UserCog className="h-4 w-4 mr-1" />
+                              Gerenciar
+                            </Button>
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => openDeleteDialog(u)}
+                              disabled={u.id === user?.id}
+                              className="border-red-500/30 text-red-400 hover:bg-red-500/10 disabled:opacity-50"
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </Button>
+                          </div>
                         </td>
                       </tr>
                     );
@@ -605,6 +679,51 @@ const AdminUsers = () => {
           </div>
         </DialogContent>
       </Dialog>
+
+      {/* Delete Confirmation Dialog */}
+      <AlertDialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle className="flex items-center gap-3 text-red-400">
+              <Trash2 className="h-5 w-5" />
+              Excluir Usuário
+            </AlertDialogTitle>
+            <AlertDialogDescription className="space-y-3">
+              <p>
+                Tem certeza que deseja excluir o usuário <strong className="text-foreground">{userToDelete?.full_name || 'Sem nome'}</strong>?
+              </p>
+              <p className="text-sm">
+                Esta ação é irreversível. O perfil, cargos e dados de autenticação do usuário serão permanentemente removidos.
+              </p>
+              {(userToDelete?.orders_count || 0) > 0 && (
+                <p className="text-amber-400 text-sm">
+                  ⚠️ Este usuário possui {userToDelete?.orders_count} pedido(s) registrado(s). Os pedidos serão mantidos para histórico.
+                </p>
+              )}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={deleting}>Cancelar</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={deleteUser}
+              disabled={deleting}
+              className="bg-red-500 hover:bg-red-600 text-white"
+            >
+              {deleting ? (
+                <>
+                  <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
+                  Excluindo...
+                </>
+              ) : (
+                <>
+                  <Trash2 className="h-4 w-4 mr-2" />
+                  Excluir Usuário
+                </>
+              )}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 };
