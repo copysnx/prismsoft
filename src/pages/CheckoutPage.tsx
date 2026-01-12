@@ -7,6 +7,7 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { useCart } from '@/hooks/useCart';
 import { useAuth } from '@/hooks/useAuth';
 import { useToast } from '@/hooks/use-toast';
+import { supabase } from '@/integrations/supabase/client';
 import Header from '@/components/Header';
 import Footer from '@/components/Footer';
 
@@ -77,19 +78,52 @@ const CheckoutPage = () => {
 
     setIsProcessing(true);
     
-    // Simulate payment processing
-    await new Promise(resolve => setTimeout(resolve, 2000));
-    
-    toast({
-      title: "Pedido realizado!",
-      description: paymentMethod === 'pix' 
-        ? "Você receberá o QR Code do PIX por email." 
-        : "Você será redirecionado para o Mercado Pago.",
-    });
-    
-    clearCart();
-    setIsProcessing(false);
-    navigate('/');
+    try {
+      if (paymentMethod === 'pix') {
+        // Create PIX payment via Flow API
+        const productNames = items.map(item => `${item.productName} (${item.variationName})`).join(', ');
+        
+        const { data, error } = await supabase.functions.invoke('create-payment', {
+          body: {
+            value: total,
+            description: `Compra: ${productNames}`,
+            customerName: `${contactInfo.firstName} ${contactInfo.lastName}`.trim(),
+            customerEmail: contactInfo.email,
+            customerPhone: contactInfo.phone,
+            expiresIn: 3600, // 1 hour
+          }
+        });
+
+        if (error) {
+          throw new Error(error.message || 'Erro ao criar pagamento');
+        }
+
+        if (data.success && data.payment) {
+          // Store payment data and navigate to payment page
+          localStorage.setItem('current-payment', JSON.stringify(data.payment));
+          clearCart();
+          navigate('/pagamento');
+        } else {
+          throw new Error(data.error || 'Erro ao processar pagamento');
+        }
+      } else {
+        // Card payment - coming soon
+        toast({
+          title: "Em breve!",
+          description: "Pagamento com cartão estará disponível em breve.",
+        });
+      }
+    } catch (error: unknown) {
+      console.error('Checkout error:', error);
+      const errorMessage = error instanceof Error ? error.message : 'Erro ao processar pagamento';
+      toast({
+        title: "Erro no pagamento",
+        description: errorMessage,
+        variant: "destructive"
+      });
+    } finally {
+      setIsProcessing(false);
+    }
   };
 
   const formatPrice = (price: number) => {
