@@ -48,9 +48,11 @@ const HeroSection = () => {
               <MessageCircle className="h-5 w-5" />
               Comunidade
             </Button>
-            <Button variant="heroOutline" size="lg" className="gap-2">
-              <Headphones className="h-5 w-5" />
-              Suporte
+            <Button variant="heroOutline" size="lg" className="gap-2" asChild>
+              <a href="https://discord.gg/HEKCFhaXwF" target="_blank" rel="noopener noreferrer">
+                <Headphones className="h-5 w-5" />
+                Suporte
+              </a>
             </Button>
           </div>
         </div>
