@@ -8,6 +8,7 @@ const corsHeaders = {
 };
 
 const FLOW_API_URL = 'https://flowapplications.com.br';
+const MIN_PAYMENT_VALUE = 1.00; // Minimum value for PIX payment (R$1.00)
 
 // =======================================================
 // INPUT VALIDATION SCHEMA
@@ -96,6 +97,19 @@ const handler = async (req: Request): Promise<Response> => {
 
     const body = parseResult.data;
     console.log('Validated payment request, value:', body.value);
+
+    // Check minimum payment value
+    if (body.value < MIN_PAYMENT_VALUE) {
+      console.log('Payment value too low:', body.value, '- minimum is', MIN_PAYMENT_VALUE);
+      return new Response(
+        JSON.stringify({ 
+          success: false, 
+          error: `Valor mínimo para pagamento via PIX é R$ ${MIN_PAYMENT_VALUE.toFixed(2)}`,
+          isFreeOrder: body.value < 0.01
+        }),
+        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
 
     // Prepare payment data
     const paymentData: Record<string, unknown> = {
