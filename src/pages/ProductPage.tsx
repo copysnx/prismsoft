@@ -6,6 +6,7 @@ import Header from "@/components/Header";
 import Footer from "@/components/Footer";
 import { useCart } from "@/hooks/useCart";
 import { useToast } from "@/hooks/use-toast";
+import { useRealTimeStock } from "@/hooks/useRealTimeStock";
 import { supabase } from "@/integrations/supabase/client";
 
 interface ProductVariation {
@@ -39,6 +40,9 @@ const ProductPage = () => {
   const [product, setProduct] = useState<Product | null>(null);
   const [loading, setLoading] = useState(true);
   const [selectedVariation, setSelectedVariation] = useState<ProductVariation | null>(null);
+
+  // Get real-time stock based on available keys
+  const { getStock, loading: stockLoading } = useRealTimeStock(product?.id);
 
   useEffect(() => {
     const fetchProduct = async () => {
@@ -84,6 +88,12 @@ const ProductPage = () => {
     fetchProduct();
   }, [slug, searchParams]);
 
+  // Helper to get real-time stock for a variation
+  const getVariationStock = (variationId: string): number => {
+    if (!product) return 0;
+    return getStock(product.id, variationId);
+  };
+
   const handleVariationChange = (variation: ProductVariation) => {
     setSelectedVariation(variation);
     setSearchParams({ variation: variation.id });
@@ -91,9 +101,19 @@ const ProductPage = () => {
 
   const handleAddToCart = () => {
     if (!product || !selectedVariation) return;
+
+    const stock = getVariationStock(selectedVariation.id);
+    if (stock <= 0) {
+      toast({
+        title: "Produto sem estoque",
+        description: "Este produto está temporariamente indisponível.",
+        variant: "destructive",
+      });
+      return;
+    }
     
     addItem({
-      productId: product.id, // Now using UUID from database
+      productId: product.id,
       productSlug: product.slug,
       productName: product.name,
       productImage: product.image_url || '/placeholder.svg',
@@ -110,6 +130,18 @@ const ProductPage = () => {
   };
 
   const handleBuyNow = () => {
+    if (!product || !selectedVariation) return;
+
+    const stock = getVariationStock(selectedVariation.id);
+    if (stock <= 0) {
+      toast({
+        title: "Produto sem estoque",
+        description: "Este produto está temporariamente indisponível.",
+        variant: "destructive",
+      });
+      return;
+    }
+
     handleAddToCart();
     navigate('/checkout');
   };
@@ -187,8 +219,14 @@ const ProductPage = () => {
                 <h1 className="text-2xl font-bold mb-2">{product.name}</h1>
                 
                 {selectedVariation && (
-                  <span className="inline-block bg-muted px-3 py-1 rounded-lg text-sm text-muted-foreground mb-4">
-                    {selectedVariation.stock} em estoque
+                  <span className={`inline-block px-3 py-1 rounded-lg text-sm mb-4 ${
+                    getVariationStock(selectedVariation.id) > 0
+                      ? 'bg-green-500/20 text-green-400'
+                      : 'bg-red-500/20 text-red-400'
+                  }`}>
+                    {getVariationStock(selectedVariation.id) > 0 
+                      ? `${getVariationStock(selectedVariation.id)} em estoque`
+                      : 'Sem estoque'}
                   </span>
                 )}
 
@@ -213,57 +251,85 @@ const ProductPage = () => {
                 {/* Variations */}
                 {product.variations && product.variations.length > 0 && (
                   <div className="space-y-3 mb-6">
-                    {product.variations.map((variation) => (
-                      <button
-                        key={variation.id}
-                        onClick={() => handleVariationChange(variation)}
-                        className={`w-full flex items-center justify-between p-4 rounded-xl border transition-all ${
-                          selectedVariation?.id === variation.id
-                            ? "border-purple-500 bg-purple-500/10"
-                            : "border-border hover:border-purple-500/50 bg-muted/30"
-                        }`}
-                      >
-                        <div className="flex items-center gap-3">
-                          <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center ${
-                            selectedVariation?.id === variation.id
-                              ? "border-purple-500 bg-purple-500"
-                              : "border-muted-foreground"
-                          }`}>
-                            {selectedVariation?.id === variation.id && (
-                              <Check className="h-3 w-3 text-white" />
+                    {product.variations.map((variation) => {
+                      const variationStock = getVariationStock(variation.id);
+                      const isOutOfStock = variationStock === 0;
+                      
+                      return (
+                        <button
+                          key={variation.id}
+                          onClick={() => handleVariationChange(variation)}
+                          disabled={isOutOfStock}
+                          className={`w-full flex items-center justify-between p-4 rounded-xl border transition-all ${
+                            isOutOfStock
+                              ? "border-border bg-muted/20 opacity-60 cursor-not-allowed"
+                              : selectedVariation?.id === variation.id
+                                ? "border-purple-500 bg-purple-500/10"
+                                : "border-border hover:border-purple-500/50 bg-muted/30"
+                          }`}
+                        >
+                          <div className="flex items-center gap-3">
+                            <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center ${
+                              isOutOfStock
+                                ? "border-muted-foreground/50"
+                                : selectedVariation?.id === variation.id
+                                  ? "border-purple-500 bg-purple-500"
+                                  : "border-muted-foreground"
+                            }`}>
+                              {selectedVariation?.id === variation.id && !isOutOfStock && (
+                                <Check className="h-3 w-3 text-white" />
+                              )}
+                            </div>
+                            <div className="text-left">
+                              <div className="font-medium">{variation.name}</div>
+                              <div className={`text-sm ${
+                                isOutOfStock
+                                  ? 'text-red-400'
+                                  : variationStock <= 5
+                                    ? 'text-yellow-400'
+                                    : 'text-green-400'
+                              }`}>
+                                {isOutOfStock 
+                                  ? 'Sem estoque' 
+                                  : variationStock <= 5
+                                    ? `Apenas ${variationStock} em estoque`
+                                    : `${variationStock} em estoque`}
+                              </div>
+                            </div>
+                          </div>
+                          <div className="text-right">
+                            <div className="font-bold">
+                              R$ {variation.price.toFixed(2).replace(".", ",")}
+                            </div>
+                            {variation.originalPrice && (
+                              <div className="text-sm text-muted-foreground line-through">
+                                R$ {variation.originalPrice.toFixed(2).replace(".", ",")}
+                              </div>
                             )}
                           </div>
-                          <div className="text-left">
-                            <div className="font-medium">{variation.name}</div>
-                            <div className="text-sm text-muted-foreground">
-                              {variation.stock} em estoque
-                            </div>
-                          </div>
-                        </div>
-                        <div className="text-right">
-                          <div className="font-bold">
-                            R$ {variation.price.toFixed(2).replace(".", ",")}
-                          </div>
-                          {variation.originalPrice && (
-                            <div className="text-sm text-muted-foreground line-through">
-                              R$ {variation.originalPrice.toFixed(2).replace(".", ",")}
-                            </div>
-                          )}
-                        </div>
-                      </button>
-                    ))}
+                        </button>
+                      );
+                    })}
                   </div>
                 )}
 
                 {/* Action Buttons */}
                 <div className="space-y-3">
-                  <Button variant="hero" size="lg" className="w-full gap-2" onClick={handleBuyNow}>
-                    <ShoppingCart className="h-5 w-5" />
-                    Comprar agora
-                  </Button>
-                  <Button variant="heroOutline" size="lg" className="w-full gap-2" onClick={handleAddToCart}>
-                    Adicionar ao carrinho
-                  </Button>
+                  {selectedVariation && getVariationStock(selectedVariation.id) > 0 ? (
+                    <>
+                      <Button variant="hero" size="lg" className="w-full gap-2" onClick={handleBuyNow}>
+                        <ShoppingCart className="h-5 w-5" />
+                        Comprar agora
+                      </Button>
+                      <Button variant="heroOutline" size="lg" className="w-full gap-2" onClick={handleAddToCart}>
+                        Adicionar ao carrinho
+                      </Button>
+                    </>
+                  ) : (
+                    <Button variant="outline" size="lg" className="w-full gap-2" disabled>
+                      Produto indisponível
+                    </Button>
+                  )}
                 </div>
               </div>
 
