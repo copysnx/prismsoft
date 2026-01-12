@@ -1,7 +1,8 @@
 import { useEffect, useState } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
-import { CheckCircle, Download, Home, Package, Clock, CreditCard, Zap, Key, Copy, Check, Loader2, ExternalLink } from 'lucide-react';
+import { CheckCircle, Download, Home, Package, Clock, CreditCard, Zap, Key, Copy, Check, Loader2, ExternalLink, Mail } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import Header from '@/components/Header';
@@ -28,11 +29,16 @@ interface OrderData {
 const PaymentSuccessPage = () => {
   const [searchParams] = useSearchParams();
   const { toast } = useToast();
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(false);
   const [orderData, setOrderData] = useState<OrderData | null>(null);
   const [deliveredKeys, setDeliveredKeys] = useState<DeliveredKey[]>([]);
   const [copiedKey, setCopiedKey] = useState<string | null>(null);
   const [retryCount, setRetryCount] = useState(0);
+  
+  // Email verification state
+  const [emailInput, setEmailInput] = useState('');
+  const [emailVerified, setEmailVerified] = useState(false);
+  const [verifying, setVerifying] = useState(false);
 
   const orderNsu = searchParams.get('order_nsu');
   const receiptUrl = searchParams.get('receipt_url');
@@ -45,16 +51,18 @@ const PaymentSuccessPage = () => {
     localStorage.removeItem('current-order');
   }, []);
 
+  // Fetch order keys after email verification
   useEffect(() => {
-    if (!orderNsu) {
-      setLoading(false);
-      return;
-    }
+    if (!emailVerified || !orderNsu || !emailInput) return;
 
     const fetchOrderKeys = async () => {
+      setLoading(true);
       try {
         const { data, error } = await supabase.functions.invoke('get-order-keys', {
-          body: { orderNsu }
+          body: { 
+            orderNsu,
+            email: emailInput // Include email for server verification
+          }
         });
 
         if (error) {
@@ -81,7 +89,62 @@ const PaymentSuccessPage = () => {
     };
 
     fetchOrderKeys();
-  }, [orderNsu, retryCount]);
+  }, [emailVerified, orderNsu, emailInput, retryCount]);
+
+  const handleVerifyEmail = async () => {
+    if (!emailInput.trim()) {
+      toast({
+        title: "Email obrigatório",
+        description: "Digite o email usado na compra.",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    setVerifying(true);
+    try {
+      const { data, error } = await supabase.functions.invoke('get-order-keys', {
+        body: { 
+          orderNsu,
+          email: emailInput.trim()
+        }
+      });
+
+      if (error) {
+        toast({
+          title: "Erro de verificação",
+          description: "Não foi possível verificar o email. Tente novamente.",
+          variant: "destructive"
+        });
+        return;
+      }
+
+      if (data.success) {
+        setEmailVerified(true);
+        setOrderData(data.order);
+        setDeliveredKeys(data.deliveredKeys || []);
+        toast({
+          title: "Email verificado!",
+          description: "Suas chaves estão disponíveis abaixo.",
+        });
+      } else {
+        toast({
+          title: "Email inválido",
+          description: data.error || "O email não corresponde ao pedido.",
+          variant: "destructive"
+        });
+      }
+    } catch (error) {
+      console.error('Error verifying email:', error);
+      toast({
+        title: "Erro",
+        description: "Erro ao verificar email. Tente novamente.",
+        variant: "destructive"
+      });
+    } finally {
+      setVerifying(false);
+    }
+  };
 
   const handleCopyKey = async (keyValue: string, keyId: string) => {
     try {
@@ -114,6 +177,85 @@ const PaymentSuccessPage = () => {
     if (method === 'credit_card' || method === 'card') return 'Cartão de Crédito';
     return 'Cartão';
   };
+
+  // Show email verification form if not verified
+  if (!emailVerified) {
+    return (
+      <div className="min-h-screen bg-background">
+        <Header />
+        
+        <main className="container mx-auto px-4 py-8 pt-24">
+          <div className="max-w-md mx-auto">
+            <div className="bg-card border border-border rounded-2xl p-8 text-center">
+              {/* Success Icon */}
+              <div className="w-20 h-20 bg-green-500/20 rounded-full flex items-center justify-center mx-auto mb-6">
+                <CheckCircle className="h-10 w-10 text-green-500" />
+              </div>
+
+              <h1 className="text-2xl font-bold text-foreground mb-2">
+                Pagamento Confirmado!
+              </h1>
+              <p className="text-muted-foreground mb-6">
+                Para visualizar suas chaves, confirme o email usado na compra.
+              </p>
+
+              {/* Email Verification Form */}
+              <div className="space-y-4">
+                <div className="flex items-center gap-2 bg-muted/30 rounded-xl p-4">
+                  <Mail className="h-5 w-5 text-muted-foreground" />
+                  <Input
+                    type="email"
+                    placeholder="Digite seu email"
+                    value={emailInput}
+                    onChange={(e) => setEmailInput(e.target.value)}
+                    onKeyDown={(e) => e.key === 'Enter' && handleVerifyEmail()}
+                    className="border-0 bg-transparent focus-visible:ring-0"
+                  />
+                </div>
+
+                <Button
+                  variant="hero"
+                  className="w-full"
+                  onClick={handleVerifyEmail}
+                  disabled={verifying}
+                >
+                  {verifying ? (
+                    <>
+                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                      Verificando...
+                    </>
+                  ) : (
+                    'Verificar Email'
+                  )}
+                </Button>
+
+                {orderNsu && (
+                  <div className="text-sm text-muted-foreground">
+                    <span className="flex items-center justify-center gap-2">
+                      <Package className="h-4 w-4" />
+                      Pedido: <span className="font-mono">{orderNsu}</span>
+                    </span>
+                  </div>
+                )}
+              </div>
+
+              {/* Back Home Button */}
+              <div className="mt-6 pt-6 border-t border-border">
+                <Button variant="outline" asChild className="w-full gap-2">
+                  <Link to="/">
+                    <Home className="h-4 w-4" />
+                    Voltar ao Início
+                  </Link>
+                </Button>
+              </div>
+            </div>
+          </div>
+        </main>
+
+        <Footer />
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-background">
