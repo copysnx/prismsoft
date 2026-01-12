@@ -225,7 +225,7 @@ const AuthPage = () => {
                     onCheckedChange={(checked) => setRememberMe(checked as boolean)}
                     className="data-[state=checked]:bg-purple-500 data-[state=checked]:border-purple-500"
                   />
-                  <span className="text-sm text-muted-foreground">Lembrar email</span>
+                  <span className="text-sm text-muted-foreground">Lembrar senha</span>
                 </label>
                 <button
                   type="button"
