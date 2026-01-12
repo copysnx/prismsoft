@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { ChevronRight, Shield, CreditCard, User, Mail, Phone, Trash2, Plus, Minus, Tag, X, Zap } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -12,6 +12,7 @@ import Header from '@/components/Header';
 import Footer from '@/components/Footer';
 
 const CheckoutPage = () => {
+  const navigate = useNavigate();
   const { items, removeItem, updateQuantity, subtotal, discount, total, couponCode, applyCoupon, removeCoupon, clearCart } = useCart();
   const { user } = useAuth();
   const { toast } = useToast();
@@ -78,66 +79,71 @@ const CheckoutPage = () => {
     setIsProcessing(true);
     
     try {
-      // Generate unique order ID
-      const orderNsu = `ORDER-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
-      
-      // Build redirect URL with origin
-      const redirectUrl = `${window.location.origin}/pagamento/sucesso`;
-      
-      // Build webhook URL for payment notifications
-      const webhookUrl = `https://ysbybtrbfxjfjpybmlob.supabase.co/functions/v1/infinitepay-webhook`;
+      if (paymentMethod === 'pix') {
+        // PIX payment via FlowPay API
+        const productNames = items.map(item => `${item.productName} (${item.variationName})`).join(', ');
+        
+        const { data, error } = await supabase.functions.invoke('create-payment', {
+          body: {
+            value: total,
+            description: `Compra: ${productNames}`,
+            customerName: `${contactInfo.firstName} ${contactInfo.lastName}`.trim(),
+            customerEmail: contactInfo.email,
+            customerPhone: contactInfo.phone,
+            expiresIn: 3600, // 1 hour
+          }
+        });
 
-      // Prepare cart items for InfinitePay
-      const cartItems = items.map(item => ({
-        productName: item.productName,
-        variationName: item.variationName,
-        price: item.price,
-        quantity: item.quantity,
-      }));
-
-      // Format phone number for InfinitePay (needs +55 prefix)
-      const formattedPhone = contactInfo.phone 
-        ? (contactInfo.phone.startsWith('+') ? contactInfo.phone : `+55${contactInfo.phone.replace(/\D/g, '')}`)
-        : undefined;
-
-      const { data, error } = await supabase.functions.invoke('infinitepay-checkout', {
-        body: {
-          items: cartItems,
-          orderNsu: orderNsu,
-          redirectUrl: redirectUrl,
-          webhookUrl: webhookUrl,
-          customer: {
-            name: `${contactInfo.firstName} ${contactInfo.lastName}`.trim() || undefined,
-            email: contactInfo.email || undefined,
-            phone: formattedPhone,
-          },
+        if (error) {
+          throw new Error(error.message || 'Erro ao criar pagamento');
         }
-      });
 
-      if (error) {
-        throw new Error(error.message || 'Erro ao criar checkout');
-      }
+        if (data.success && data.payment) {
+          // Store payment data and navigate to payment page
+          localStorage.setItem('current-payment', JSON.stringify(data.payment));
+          clearCart();
+          navigate('/pagamento');
+        } else {
+          throw new Error(data.error || 'Erro ao processar pagamento');
+        }
+      } else {
+        // Card payment via InfinitePay
+        const orderNsu = `ORDER-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+        const redirectUrl = `${window.location.origin}/pagamento/sucesso`;
+        const webhookUrl = `https://ysbybtrbfxjfjpybmlob.supabase.co/functions/v1/infinitepay-webhook`;
 
-      console.log('InfinitePay response:', data);
-
-      if (data.success && data.checkoutUrl) {
-        // Store order info for reference
-        localStorage.setItem('current-order', JSON.stringify({
-          orderNsu: orderNsu,
-          items: items,
-          total: total,
-          createdAt: new Date().toISOString(),
+        const cartItems = items.map(item => ({
+          productName: item.productName,
+          variationName: item.variationName,
+          price: item.price,
+          quantity: item.quantity,
         }));
-        
-        // Clear cart before redirecting
-        clearCart();
-        
-        // Redirect to InfinitePay checkout
-        window.location.href = data.checkoutUrl;
-      } else if (data.success && data.data) {
-        // Handle alternative response format
-        const checkoutUrl = data.data.url || data.data.checkout_url || data.data.link;
-        if (checkoutUrl) {
+
+        const formattedPhone = contactInfo.phone 
+          ? (contactInfo.phone.startsWith('+') ? contactInfo.phone : `+55${contactInfo.phone.replace(/\D/g, '')}`)
+          : undefined;
+
+        const { data, error } = await supabase.functions.invoke('infinitepay-checkout', {
+          body: {
+            items: cartItems,
+            orderNsu: orderNsu,
+            redirectUrl: redirectUrl,
+            webhookUrl: webhookUrl,
+            customer: {
+              name: `${contactInfo.firstName} ${contactInfo.lastName}`.trim() || undefined,
+              email: contactInfo.email || undefined,
+              phone: formattedPhone,
+            },
+          }
+        });
+
+        if (error) {
+          throw new Error(error.message || 'Erro ao criar checkout');
+        }
+
+        console.log('InfinitePay response:', data);
+
+        if (data.success && data.checkoutUrl) {
           localStorage.setItem('current-order', JSON.stringify({
             orderNsu: orderNsu,
             items: items,
@@ -145,13 +151,25 @@ const CheckoutPage = () => {
             createdAt: new Date().toISOString(),
           }));
           clearCart();
-          window.location.href = checkoutUrl;
+          window.location.href = data.checkoutUrl;
+        } else if (data.success && data.data) {
+          const checkoutUrl = data.data.url || data.data.checkout_url || data.data.link;
+          if (checkoutUrl) {
+            localStorage.setItem('current-order', JSON.stringify({
+              orderNsu: orderNsu,
+              items: items,
+              total: total,
+              createdAt: new Date().toISOString(),
+            }));
+            clearCart();
+            window.location.href = checkoutUrl;
+          } else {
+            console.error('No checkout URL in response:', data);
+            throw new Error('URL de checkout não encontrada na resposta');
+          }
         } else {
-          console.error('No checkout URL in response:', data);
-          throw new Error('URL de checkout não encontrada na resposta');
+          throw new Error(data.error || 'Erro ao processar pagamento');
         }
-      } else {
-        throw new Error(data.error || 'Erro ao processar pagamento');
       }
     } catch (error: unknown) {
       console.error('Checkout error:', error);
