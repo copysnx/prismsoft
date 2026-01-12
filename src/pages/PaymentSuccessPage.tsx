@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
-import { CheckCircle, Download, Home, Package, Clock, CreditCard, Zap, Key, Copy, Check, Loader2 } from 'lucide-react';
+import { CheckCircle, Download, Home, Package, Clock, CreditCard, Zap, Key, Copy, Check, Loader2, ExternalLink } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
@@ -239,6 +239,17 @@ const PaymentSuccessPage = () => {
 
             {/* Action Buttons */}
             <div className="flex flex-col sm:flex-row gap-3 justify-center">
+              <Button
+                variant="hero"
+                asChild
+                className="gap-2"
+              >
+                <a href="https://prismcheats.shop/" target="_blank" rel="noopener noreferrer">
+                  <ExternalLink className="h-4 w-4" />
+                  Tutorial
+                </a>
+              </Button>
+
               {(receiptUrl || orderData?.receiptUrl) && (
                 <Button
                   variant="outline"
@@ -252,7 +263,7 @@ const PaymentSuccessPage = () => {
                 </Button>
               )}
               
-              <Button asChild className="gap-2">
+              <Button variant="outline" asChild className="gap-2">
                 <Link to="/">
                   <Home className="h-4 w-4" />
                   Voltar ao Início
