@@ -1,15 +1,38 @@
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useCallback, useRef } from "react";
+
+interface TrailPoint {
+  x: number;
+  y: number;
+  id: number;
+  opacity: number;
+  scale: number;
+}
 
 const CustomCursor = () => {
   const [position, setPosition] = useState({ x: 0, y: 0 });
-  const [followerPosition, setFollowerPosition] = useState({ x: 0, y: 0 });
   const [isHovering, setIsHovering] = useState(false);
   const [isClicking, setIsClicking] = useState(false);
   const [isVisible, setIsVisible] = useState(false);
+  const [trail, setTrail] = useState<TrailPoint[]>([]);
+  const trailIdRef = useRef(0);
 
   const handleMouseMove = useCallback((e: MouseEvent) => {
-    setPosition({ x: e.clientX, y: e.clientY });
+    const newPosition = { x: e.clientX, y: e.clientY };
+    setPosition(newPosition);
     setIsVisible(true);
+
+    // Add new trail point
+    trailIdRef.current += 1;
+    setTrail((prev) => [
+      ...prev.slice(-20), // Keep last 20 points
+      {
+        x: newPosition.x,
+        y: newPosition.y,
+        id: trailIdRef.current,
+        opacity: 1,
+        scale: 1,
+      },
+    ]);
   }, []);
 
   const handleMouseEnter = useCallback(() => {
@@ -44,30 +67,28 @@ const CustomCursor = () => {
     };
   }, [handleMouseMove, handleMouseEnter, handleMouseLeave, handleMouseDown, handleMouseUp]);
 
-  // Smooth follower animation
+  // Fade out trail points
   useEffect(() => {
-    let animationFrameId: number;
+    const interval = setInterval(() => {
+      setTrail((prev) =>
+        prev
+          .map((point) => ({
+            ...point,
+            opacity: point.opacity - 0.08,
+            scale: point.scale + 0.03,
+          }))
+          .filter((point) => point.opacity > 0)
+      );
+    }, 30);
 
-    const animate = () => {
-      setFollowerPosition((prev) => ({
-        x: prev.x + (position.x - prev.x) * 0.15,
-        y: prev.y + (position.y - prev.y) * 0.15,
-      }));
-      animationFrameId = requestAnimationFrame(animate);
-    };
-
-    animationFrameId = requestAnimationFrame(animate);
-
-    return () => {
-      cancelAnimationFrame(animationFrameId);
-    };
-  }, [position]);
+    return () => clearInterval(interval);
+  }, []);
 
   // Detect hoverable elements
   useEffect(() => {
     const handleHoverDetection = (e: MouseEvent) => {
       const target = e.target as HTMLElement;
-      const isHoverable = 
+      const isHoverable =
         target.tagName === "A" ||
         target.tagName === "BUTTON" ||
         target.closest("a") ||
@@ -75,7 +96,7 @@ const CustomCursor = () => {
         target.closest("[role='button']") ||
         target.classList.contains("cursor-pointer") ||
         getComputedStyle(target).cursor === "pointer";
-      
+
       setIsHovering(!!isHoverable);
     };
 
@@ -87,7 +108,8 @@ const CustomCursor = () => {
   }, []);
 
   // Hide on touch devices
-  const isTouchDevice = typeof window !== "undefined" && "ontouchstart" in window;
+  const isTouchDevice =
+    typeof window !== "undefined" && "ontouchstart" in window;
 
   if (isTouchDevice) {
     return null;
@@ -101,6 +123,53 @@ const CustomCursor = () => {
           cursor: none !important;
         }
       `}</style>
+
+      {/* Smoke trail */}
+      {trail.map((point) => (
+        <div
+          key={point.id}
+          className="fixed pointer-events-none z-[9997]"
+          style={{
+            left: point.x,
+            top: point.y,
+            transform: "translate(-50%, -50%)",
+          }}
+        >
+          {/* Main smoke particle */}
+          <div
+            className="rounded-full"
+            style={{
+              width: `${16 * point.scale}px`,
+              height: `${16 * point.scale}px`,
+              background: `radial-gradient(circle, rgba(168, 85, 247, ${point.opacity * 0.6}) 0%, rgba(192, 38, 211, ${point.opacity * 0.3}) 40%, transparent 70%)`,
+              filter: `blur(${4 + point.scale * 2}px)`,
+            }}
+          />
+        </div>
+      ))}
+
+      {/* Secondary smoke layer for depth */}
+      {trail.filter((_, i) => i % 2 === 0).map((point) => (
+        <div
+          key={`smoke-${point.id}`}
+          className="fixed pointer-events-none z-[9996]"
+          style={{
+            left: point.x + (Math.random() - 0.5) * 10,
+            top: point.y + (Math.random() - 0.5) * 10,
+            transform: "translate(-50%, -50%)",
+          }}
+        >
+          <div
+            className="rounded-full"
+            style={{
+              width: `${24 * point.scale}px`,
+              height: `${24 * point.scale}px`,
+              background: `radial-gradient(circle, rgba(139, 92, 246, ${point.opacity * 0.3}) 0%, rgba(217, 70, 239, ${point.opacity * 0.15}) 50%, transparent 70%)`,
+              filter: `blur(${8 + point.scale * 3}px)`,
+            }}
+          />
+        </div>
+      ))}
 
       {/* Main cursor dot */}
       <div
@@ -118,59 +187,33 @@ const CustomCursor = () => {
             isClicking ? "scale-50" : "scale-100"
           }`}
           style={{
-            width: isHovering ? "8px" : "6px",
-            height: isHovering ? "8px" : "6px",
+            width: isHovering ? "12px" : "8px",
+            height: isHovering ? "12px" : "8px",
+            boxShadow: "0 0 10px rgba(255, 255, 255, 0.8)",
           }}
         />
       </div>
 
-      {/* Follower circle */}
+      {/* Glow around main cursor */}
       <div
         className="fixed pointer-events-none z-[9998]"
         style={{
-          left: followerPosition.x,
-          top: followerPosition.y,
+          left: position.x,
+          top: position.y,
           transform: "translate(-50%, -50%)",
           opacity: isVisible ? 1 : 0,
           transition: "opacity 0.3s ease",
         }}
       >
         <div
-          className={`rounded-full border-2 transition-all duration-300 ease-out ${
-            isHovering 
-              ? "border-purple-500 bg-purple-500/10 scale-150" 
-              : "border-purple-400/60"
-          } ${isClicking ? "scale-75" : ""}`}
-          style={{
-            width: "40px",
-            height: "40px",
-            boxShadow: isHovering 
-              ? "0 0 20px rgba(168, 85, 247, 0.4), 0 0 40px rgba(168, 85, 247, 0.2)" 
-              : "0 0 10px rgba(168, 85, 247, 0.2)",
-          }}
-        />
-      </div>
-
-      {/* Trailing effect */}
-      <div
-        className="fixed pointer-events-none z-[9997]"
-        style={{
-          left: followerPosition.x,
-          top: followerPosition.y,
-          transform: "translate(-50%, -50%)",
-          opacity: isVisible ? 0.3 : 0,
-          transition: "opacity 0.5s ease",
-        }}
-      >
-        <div
-          className={`rounded-full border transition-all duration-500 ease-out ${
-            isHovering 
-              ? "border-fuchsia-500/40 scale-200" 
-              : "border-fuchsia-400/20"
+          className={`rounded-full transition-all duration-200 ease-out ${
+            isClicking ? "scale-75" : "scale-100"
           }`}
           style={{
-            width: "60px",
-            height: "60px",
+            width: isHovering ? "30px" : "20px",
+            height: isHovering ? "30px" : "20px",
+            background: `radial-gradient(circle, rgba(168, 85, 247, ${isHovering ? 0.5 : 0.3}) 0%, transparent 70%)`,
+            filter: "blur(4px)",
           }}
         />
       </div>
