@@ -30,9 +30,7 @@ const Footer = () => {
             
             <div className="flex gap-3">
               
-              <a href="#" className="flex h-10 w-10 items-center justify-center rounded-lg bg-muted text-muted-foreground hover:bg-purple-600 hover:text-white transition-colors">
-                <Instagram className="h-5 w-5" />
-              </a>
+              
               
               
             </div>
