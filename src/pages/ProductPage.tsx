@@ -98,7 +98,7 @@ const ProductPage = () => {
 
   const handleVariationChange = (variation: ProductVariation) => {
     setSelectedVariation(variation);
-    setSearchParams({ variation: variation.id });
+    setSearchParams({ variation: variation.id }, { replace: true });
   };
 
   const handleAddToCart = () => {
