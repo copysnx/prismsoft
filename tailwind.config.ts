@@ -112,6 +112,22 @@ export default {
           "0%": { opacity: "0" },
           "100%": { opacity: "1" },
         },
+        "prism-fall": {
+          "0%": { 
+            transform: "translateY(-100px) rotate(0deg)",
+            opacity: "0",
+          },
+          "10%": { 
+            opacity: "1",
+          },
+          "90%": { 
+            opacity: "1",
+          },
+          "100%": { 
+            transform: "translateY(100vh) rotate(360deg)",
+            opacity: "0",
+          },
+        },
       },
       animation: {
         "accordion-down": "accordion-down 0.2s ease-out",
@@ -120,6 +136,7 @@ export default {
         "pulse-glow": "pulse-glow 2s ease-in-out infinite",
         "slide-up": "slide-up 0.5s ease-out",
         "fade-in": "fade-in 0.3s ease-out",
+        "prism-fall": "prism-fall linear infinite",
       },
     },
   },
