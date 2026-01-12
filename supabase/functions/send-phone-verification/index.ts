@@ -10,26 +10,61 @@ interface SendVerificationRequest {
   phone: string;
 }
 
+// Rate limiting configuration
+const RATE_LIMIT_WINDOW_MS = 60 * 60 * 1000; // 1 hour
+const MAX_SMS_PER_HOUR = 5;
+
+// In-memory rate limiting store (resets on function restart, but provides protection during attacks)
+const smsSends = new Map<string, { count: number; firstSend: number }>();
+
+function checkRateLimit(userId: string): { allowed: boolean; remaining: number; resetIn: number } {
+  const now = Date.now();
+  const sends = smsSends.get(userId);
+
+  if (!sends || now - sends.firstSend > RATE_LIMIT_WINDOW_MS) {
+    smsSends.set(userId, { count: 1, firstSend: now });
+    return { allowed: true, remaining: MAX_SMS_PER_HOUR - 1, resetIn: RATE_LIMIT_WINDOW_MS };
+  }
+
+  if (sends.count >= MAX_SMS_PER_HOUR) {
+    const resetIn = RATE_LIMIT_WINDOW_MS - (now - sends.firstSend);
+    return { allowed: false, remaining: 0, resetIn };
+  }
+
+  sends.count++;
+  return { allowed: true, remaining: MAX_SMS_PER_HOUR - sends.count, resetIn: RATE_LIMIT_WINDOW_MS - (now - sends.firstSend) };
+}
+
 // Generate a random 6-digit code
 function generateVerificationCode(): string {
   return Math.floor(100000 + Math.random() * 900000).toString();
+}
+
+// Validate Brazilian phone number format
+function isValidBrazilianPhone(phone: string): boolean {
+  const cleaned = phone.replace(/\D/g, "");
+  // Brazilian phones: 10-11 digits (with area code), or 12-13 with country code 55
+  if (cleaned.startsWith("55")) {
+    return cleaned.length >= 12 && cleaned.length <= 13;
+  }
+  return cleaned.length >= 10 && cleaned.length <= 11;
 }
 
 // Format phone number for Vonage (must include country code)
 function formatPhoneNumber(phone: string): string {
   // Remove all non-numeric characters
   let cleaned = phone.replace(/\D/g, "");
-  
+
   // If starts with 0, assume Brazil and add 55
   if (cleaned.startsWith("0")) {
     cleaned = "55" + cleaned.substring(1);
   }
-  
+
   // If doesn't start with country code, assume Brazil
   if (!cleaned.startsWith("55") && cleaned.length <= 11) {
     cleaned = "55" + cleaned;
   }
-  
+
   return cleaned;
 }
 
@@ -58,7 +93,7 @@ const handler = async (req: Request): Promise<Response> => {
 
     const token = authHeader.replace("Bearer ", "");
     const { data: claimsData, error: claimsError } = await supabase.auth.getUser(token);
-    
+
     if (claimsError || !claimsData?.user) {
       console.error("Auth error:", claimsError);
       return new Response(
@@ -68,6 +103,28 @@ const handler = async (req: Request): Promise<Response> => {
     }
 
     const userId = claimsData.user.id;
+
+    // Check rate limit before processing
+    const rateLimitResult = checkRateLimit(userId);
+    if (!rateLimitResult.allowed) {
+      const resetInMinutes = Math.ceil(rateLimitResult.resetIn / 60000);
+      console.warn(`Rate limit exceeded for user ${userId}. Reset in ${resetInMinutes} minutes.`);
+      return new Response(
+        JSON.stringify({
+          error: `Limite de SMS excedido. Tente novamente em ${resetInMinutes} minutos.`,
+          retryAfter: resetInMinutes,
+        }),
+        {
+          status: 429,
+          headers: {
+            ...corsHeaders,
+            "Content-Type": "application/json",
+            "Retry-After": Math.ceil(rateLimitResult.resetIn / 1000).toString(),
+          },
+        }
+      );
+    }
+
     const { phone }: SendVerificationRequest = await req.json();
 
     if (!phone) {
@@ -77,8 +134,16 @@ const handler = async (req: Request): Promise<Response> => {
       );
     }
 
+    // Validate phone number format
+    if (!isValidBrazilianPhone(phone)) {
+      return new Response(
+        JSON.stringify({ error: "Número de telefone inválido. Use o formato brasileiro (DDD + número)." }),
+        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
     const formattedPhone = formatPhoneNumber(phone);
-    console.log(`Sending verification to: ${formattedPhone} for user: ${userId}`);
+    console.log(`Sending verification to: ${formattedPhone} for user: ${userId} (${rateLimitResult.remaining} SMS remaining this hour)`);
 
     // Generate verification code
     const code = generateVerificationCode();
@@ -155,7 +220,11 @@ const handler = async (req: Request): Promise<Response> => {
     console.log(`Verification code sent successfully to ${formattedPhone}`);
 
     return new Response(
-      JSON.stringify({ success: true, message: "Código enviado com sucesso" }),
+      JSON.stringify({
+        success: true,
+        message: "Código enviado com sucesso",
+        remaining: rateLimitResult.remaining,
+      }),
       { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
   } catch (error: any) {
