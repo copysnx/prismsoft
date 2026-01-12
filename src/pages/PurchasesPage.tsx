@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { ArrowLeft, Package, Key, Copy, Check, Calendar, CreditCard, Loader2, ShoppingBag, BookOpen, ExternalLink } from "lucide-react";
+import { ArrowLeft, Package, Key, Copy, Check, Calendar, CreditCard, Loader2, ShoppingBag, BookOpen, ExternalLink, Download, Shield, Zap, MessageCircle, AlertTriangle, ChevronRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useAuth } from "@/hooks/useAuth";
@@ -362,57 +362,167 @@ const PurchasesPage = () => {
 
             {/* Tutorial Tab */}
             <TabsContent value="tutorial">
-              <div className="bg-card rounded-2xl border border-border p-8">
-                <div className="text-center mb-8">
-                  <div className="p-4 rounded-2xl bg-gradient-to-br from-purple-500/20 to-fuchsia-500/20 border border-purple-500/30 inline-block mb-4">
-                    <BookOpen className="h-12 w-12 text-purple-400" />
-                  </div>
-                  <h2 className="text-2xl font-bold text-gradient mb-2">Tutorial de Uso</h2>
-                  <p className="text-muted-foreground">
-                    Aprenda como utilizar nossos produtos de forma correta e segura
-                  </p>
-                </div>
-
-                <div className="space-y-4">
-                  <div className="bg-muted/30 rounded-xl p-6 border border-border/50">
-                    <h3 className="font-semibold mb-2 flex items-center gap-2">
-                      <span className="flex items-center justify-center w-6 h-6 rounded-full bg-purple-500/20 text-purple-400 text-sm font-bold">1</span>
-                      Acesse o Tutorial Completo
-                    </h3>
-                    <p className="text-muted-foreground text-sm mb-4">
-                      Clique no botão abaixo para acessar nosso site oficial com todos os tutoriais detalhados para cada produto.
+              <div className="space-y-6">
+                {/* Hero Section */}
+                <div className="relative overflow-hidden rounded-2xl border border-purple-500/30 bg-gradient-to-br from-purple-900/40 via-background to-fuchsia-900/30 p-8 sm:p-12">
+                  {/* Background glow effects */}
+                  <div className="absolute -top-24 -right-24 w-64 h-64 bg-purple-500/20 rounded-full blur-3xl" />
+                  <div className="absolute -bottom-24 -left-24 w-64 h-64 bg-fuchsia-500/20 rounded-full blur-3xl" />
+                  
+                  <div className="relative z-10 text-center">
+                    <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-purple-500/10 border border-purple-500/30 text-purple-400 text-sm font-medium mb-6">
+                      <Zap className="h-4 w-4" />
+                      PRISM CHEATS
+                    </div>
+                    
+                    <h2 className="text-3xl sm:text-4xl font-bold mb-4">
+                      <span className="text-gradient">Tutorial de Uso</span>
+                    </h2>
+                    <p className="text-muted-foreground max-w-xl mx-auto mb-8">
+                      Siga os passos abaixo para configurar e utilizar nossos produtos de forma segura e otimizada
                     </p>
+                    
                     <Button
-                      variant="hero"
-                      className="w-full sm:w-auto"
+                      size="lg"
+                      className="bg-gradient-to-r from-purple-600 to-fuchsia-600 hover:from-purple-500 hover:to-fuchsia-500 text-white border-0 shadow-lg shadow-purple-500/25 hover:shadow-purple-500/40 transition-all duration-300"
                       onClick={() => window.open("https://prismcheats.shop/", "_blank")}
                     >
-                      <ExternalLink className="h-4 w-4 mr-2" />
-                      Acessar Tutorial
+                      <ExternalLink className="h-5 w-5 mr-2" />
+                      Acessar Site Oficial
+                      <ChevronRight className="h-5 w-5 ml-1" />
                     </Button>
                   </div>
+                </div>
 
-                  <div className="bg-muted/30 rounded-xl p-6 border border-border/50">
-                    <h3 className="font-semibold mb-2 flex items-center gap-2">
-                      <span className="flex items-center justify-center w-6 h-6 rounded-full bg-purple-500/20 text-purple-400 text-sm font-bold">2</span>
-                      Suporte
-                    </h3>
-                    <p className="text-muted-foreground text-sm">
-                      Se tiver dúvidas após seguir o tutorial, entre em contato com nosso suporte através do Discord ou pelo site oficial.
-                    </p>
+                {/* Steps Grid */}
+                <div className="grid sm:grid-cols-2 gap-4">
+                  {/* Step 1 */}
+                  <div className="group relative rounded-2xl border border-border bg-card p-6 transition-all duration-300 hover:border-purple-500/50 hover:shadow-lg hover:shadow-purple-500/10">
+                    <div className="absolute inset-0 rounded-2xl bg-gradient-to-br from-purple-500/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
+                    <div className="relative">
+                      <div className="flex items-start gap-4 mb-4">
+                        <div className="flex items-center justify-center w-12 h-12 rounded-xl bg-gradient-to-br from-purple-500/20 to-fuchsia-500/20 border border-purple-500/30 shrink-0">
+                          <Download className="h-6 w-6 text-purple-400" />
+                        </div>
+                        <div>
+                          <span className="text-xs font-bold text-purple-400 uppercase tracking-wider">Passo 1</span>
+                          <h3 className="text-lg font-semibold text-foreground">Download</h3>
+                        </div>
+                      </div>
+                      <p className="text-muted-foreground text-sm leading-relaxed">
+                        Acesse o site oficial e faça o download do loader mais recente. Extraia os arquivos em uma pasta de sua preferência.
+                      </p>
+                    </div>
                   </div>
 
-                  <div className="bg-muted/30 rounded-xl p-6 border border-border/50">
-                    <h3 className="font-semibold mb-2 flex items-center gap-2">
-                      <span className="flex items-center justify-center w-6 h-6 rounded-full bg-purple-500/20 text-purple-400 text-sm font-bold">3</span>
-                      Dicas Importantes
-                    </h3>
-                    <ul className="text-muted-foreground text-sm space-y-2">
-                      <li>• Sempre baixe os arquivos apenas do site oficial</li>
-                      <li>• Desative o antivírus temporariamente durante a instalação</li>
-                      <li>• Execute como administrador quando solicitado</li>
-                      <li>• Mantenha suas keys em segurança e não compartilhe</li>
-                    </ul>
+                  {/* Step 2 */}
+                  <div className="group relative rounded-2xl border border-border bg-card p-6 transition-all duration-300 hover:border-purple-500/50 hover:shadow-lg hover:shadow-purple-500/10">
+                    <div className="absolute inset-0 rounded-2xl bg-gradient-to-br from-purple-500/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
+                    <div className="relative">
+                      <div className="flex items-start gap-4 mb-4">
+                        <div className="flex items-center justify-center w-12 h-12 rounded-xl bg-gradient-to-br from-purple-500/20 to-fuchsia-500/20 border border-purple-500/30 shrink-0">
+                          <Shield className="h-6 w-6 text-purple-400" />
+                        </div>
+                        <div>
+                          <span className="text-xs font-bold text-purple-400 uppercase tracking-wider">Passo 2</span>
+                          <h3 className="text-lg font-semibold text-foreground">Antivírus</h3>
+                        </div>
+                      </div>
+                      <p className="text-muted-foreground text-sm leading-relaxed">
+                        Desative temporariamente seu antivírus e Windows Defender. Adicione a pasta do loader às exceções.
+                      </p>
+                    </div>
+                  </div>
+
+                  {/* Step 3 */}
+                  <div className="group relative rounded-2xl border border-border bg-card p-6 transition-all duration-300 hover:border-purple-500/50 hover:shadow-lg hover:shadow-purple-500/10">
+                    <div className="absolute inset-0 rounded-2xl bg-gradient-to-br from-purple-500/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
+                    <div className="relative">
+                      <div className="flex items-start gap-4 mb-4">
+                        <div className="flex items-center justify-center w-12 h-12 rounded-xl bg-gradient-to-br from-purple-500/20 to-fuchsia-500/20 border border-purple-500/30 shrink-0">
+                          <Key className="h-6 w-6 text-purple-400" />
+                        </div>
+                        <div>
+                          <span className="text-xs font-bold text-purple-400 uppercase tracking-wider">Passo 3</span>
+                          <h3 className="text-lg font-semibold text-foreground">Ativação</h3>
+                        </div>
+                      </div>
+                      <p className="text-muted-foreground text-sm leading-relaxed">
+                        Execute o loader como administrador e insira sua key de ativação. A key está disponível na aba "Minhas Compras".
+                      </p>
+                    </div>
+                  </div>
+
+                  {/* Step 4 */}
+                  <div className="group relative rounded-2xl border border-border bg-card p-6 transition-all duration-300 hover:border-purple-500/50 hover:shadow-lg hover:shadow-purple-500/10">
+                    <div className="absolute inset-0 rounded-2xl bg-gradient-to-br from-purple-500/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
+                    <div className="relative">
+                      <div className="flex items-start gap-4 mb-4">
+                        <div className="flex items-center justify-center w-12 h-12 rounded-xl bg-gradient-to-br from-purple-500/20 to-fuchsia-500/20 border border-purple-500/30 shrink-0">
+                          <Zap className="h-6 w-6 text-purple-400" />
+                        </div>
+                        <div>
+                          <span className="text-xs font-bold text-purple-400 uppercase tracking-wider">Passo 4</span>
+                          <h3 className="text-lg font-semibold text-foreground">Injeção</h3>
+                        </div>
+                      </div>
+                      <p className="text-muted-foreground text-sm leading-relaxed">
+                        Abra o jogo e aguarde carregar completamente. Volte ao loader e clique em "Injetar". Pronto!
+                      </p>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Warning Card */}
+                <div className="rounded-2xl border border-yellow-500/30 bg-yellow-500/5 p-6">
+                  <div className="flex items-start gap-4">
+                    <div className="flex items-center justify-center w-12 h-12 rounded-xl bg-yellow-500/10 border border-yellow-500/30 shrink-0">
+                      <AlertTriangle className="h-6 w-6 text-yellow-500" />
+                    </div>
+                    <div>
+                      <h3 className="text-lg font-semibold text-yellow-500 mb-2">Dicas Importantes</h3>
+                      <ul className="text-muted-foreground text-sm space-y-2">
+                        <li className="flex items-start gap-2">
+                          <span className="text-yellow-500 mt-1">•</span>
+                          Sempre baixe os arquivos apenas do site oficial
+                        </li>
+                        <li className="flex items-start gap-2">
+                          <span className="text-yellow-500 mt-1">•</span>
+                          Nunca compartilhe sua key com outras pessoas
+                        </li>
+                        <li className="flex items-start gap-2">
+                          <span className="text-yellow-500 mt-1">•</span>
+                          Mantenha o loader sempre atualizado para melhor desempenho
+                        </li>
+                        <li className="flex items-start gap-2">
+                          <span className="text-yellow-500 mt-1">•</span>
+                          Em caso de ban, entre em contato imediatamente com o suporte
+                        </li>
+                      </ul>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Support Card */}
+                <div className="rounded-2xl border border-border bg-card p-6">
+                  <div className="flex flex-col sm:flex-row items-center gap-6">
+                    <div className="flex items-center justify-center w-16 h-16 rounded-2xl bg-gradient-to-br from-purple-500/20 to-fuchsia-500/20 border border-purple-500/30 shrink-0">
+                      <MessageCircle className="h-8 w-8 text-purple-400" />
+                    </div>
+                    <div className="text-center sm:text-left flex-1">
+                      <h3 className="text-lg font-semibold text-foreground mb-1">Precisa de Ajuda?</h3>
+                      <p className="text-muted-foreground text-sm">
+                        Nossa equipe de suporte está disponível 24/7 para ajudar você. Entre em contato pelo Discord ou site oficial.
+                      </p>
+                    </div>
+                    <Button
+                      variant="outline"
+                      className="border-purple-500/30 hover:bg-purple-500/10 hover:border-purple-500/50 shrink-0"
+                      onClick={() => window.open("https://prismcheats.shop/", "_blank")}
+                    >
+                      <MessageCircle className="h-4 w-4 mr-2" />
+                      Suporte
+                    </Button>
                   </div>
                 </div>
               </div>
