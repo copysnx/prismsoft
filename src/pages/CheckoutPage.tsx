@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { ChevronRight, Shield, CreditCard, User, Mail, Phone, Trash2, Plus, Minus, Tag, X, Zap } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -32,6 +32,45 @@ const CheckoutPage = () => {
     email: user?.email || '',
     phone: ''
   });
+
+  // Fetch user profile to get phone number
+  useEffect(() => {
+    const fetchUserProfile = async () => {
+      if (!user?.id) return;
+      
+      try {
+        const { data: profile, error } = await supabase
+          .from('profiles')
+          .select('full_name, phone')
+          .eq('id', user.id)
+          .single();
+        
+        if (error) {
+          console.error('Error fetching profile:', error);
+          return;
+        }
+        
+        if (profile) {
+          // Parse full name into first and last name
+          const nameParts = (profile.full_name || '').trim().split(' ');
+          const firstName = nameParts[0] || '';
+          const lastName = nameParts.slice(1).join(' ') || '';
+          
+          setContactInfo(prev => ({
+            ...prev,
+            firstName: prev.firstName || firstName,
+            lastName: prev.lastName || lastName,
+            email: prev.email || user.email || '',
+            phone: prev.phone || profile.phone || ''
+          }));
+        }
+      } catch (err) {
+        console.error('Error fetching user profile:', err);
+      }
+    };
+
+    fetchUserProfile();
+  }, [user]);
 
   const handleApplyCoupon = async () => {
     if (!couponInput.trim()) return;
