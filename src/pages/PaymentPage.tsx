@@ -87,11 +87,25 @@ const PaymentPage = () => {
         if (data.success && data.payment) {
           if (data.payment.isPaid) {
             setPaymentStatus('paid');
+            const storedPayment = localStorage.getItem('current-payment');
+            let orderNsu = '';
+            if (storedPayment) {
+              try {
+                const parsed = JSON.parse(storedPayment);
+                orderNsu = parsed.orderNsu || '';
+              } catch {}
+            }
             localStorage.removeItem('current-payment');
-            toast({
-              title: "Pagamento confirmado!",
-              description: "Seu pagamento foi aprovado com sucesso.",
-            });
+            
+            // Redirect to success page with order info
+            if (orderNsu) {
+              navigate(`/pagamento/sucesso?order_nsu=${encodeURIComponent(orderNsu)}&capture_method=pix`);
+            } else {
+              toast({
+                title: "Pagamento confirmado!",
+                description: "Seu pagamento foi aprovado com sucesso.",
+              });
+            }
           } else if (data.payment.isExpired) {
             setPaymentStatus('expired');
           }
@@ -139,11 +153,25 @@ const PaymentPage = () => {
       if (data.success && data.payment) {
         if (data.payment.isPaid) {
           setPaymentStatus('paid');
+          const storedPayment = localStorage.getItem('current-payment');
+          let orderNsu = '';
+          if (storedPayment) {
+            try {
+              const parsed = JSON.parse(storedPayment);
+              orderNsu = parsed.orderNsu || '';
+            } catch {}
+          }
           localStorage.removeItem('current-payment');
-          toast({
-            title: "Pagamento confirmado!",
-            description: "Seu pagamento foi aprovado com sucesso.",
-          });
+          
+          // Redirect to success page with order info
+          if (orderNsu) {
+            navigate(`/pagamento/sucesso?order_nsu=${encodeURIComponent(orderNsu)}&capture_method=pix`);
+          } else {
+            toast({
+              title: "Pagamento confirmado!",
+              description: "Seu pagamento foi aprovado com sucesso.",
+            });
+          }
         } else if (data.payment.isExpired) {
           setPaymentStatus('expired');
           toast({
