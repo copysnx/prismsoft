@@ -1,20 +1,36 @@
-import { Search, User, ShoppingCart } from "lucide-react";
+import { Search, User, ShoppingCart, LogOut } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { useNavigate, Link } from "react-router-dom";
+import { useAuth } from "@/hooks/useAuth";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 
 const Header = () => {
+  const navigate = useNavigate();
+  const { user, signOut, loading } = useAuth();
+
+  const handleSignOut = async () => {
+    await signOut();
+    navigate("/");
+  };
+
   return (
     <header className="fixed top-0 left-0 right-0 z-50 border-b border-border bg-background/80 backdrop-blur-xl">
       <div className="container mx-auto flex h-16 items-center justify-between px-4">
         {/* Logo */}
-        <a href="/" className="flex items-center gap-2">
+        <Link to="/" className="flex items-center gap-2">
           <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-gradient-to-br from-purple-500 to-fuchsia-500">
             <span className="text-lg font-black text-white">N</span>
           </div>
           <span className="text-lg font-bold text-foreground">
             NexT <span className="text-gradient">SysteM</span>
           </span>
-        </a>
+        </Link>
 
         {/* Search Bar */}
         <div className="hidden md:flex flex-1 max-w-md mx-8">
@@ -30,9 +46,41 @@ const Header = () => {
 
         {/* Actions */}
         <div className="flex items-center gap-3">
-          <Button variant="ghost" size="icon" className="hidden md:flex">
-            <User className="h-5 w-5" />
-          </Button>
+          {loading ? (
+            <div className="h-10 w-10 animate-pulse rounded-full bg-muted" />
+          ) : user ? (
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="ghost" size="icon" className="relative">
+                  <div className="flex h-8 w-8 items-center justify-center rounded-full bg-gradient-to-br from-purple-500 to-fuchsia-500">
+                    <span className="text-sm font-bold text-white">
+                      {user.email?.charAt(0).toUpperCase()}
+                    </span>
+                  </div>
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="w-56">
+                <div className="px-2 py-1.5 text-sm">
+                  <p className="font-medium">{user.user_metadata?.full_name || "Usuário"}</p>
+                  <p className="text-muted-foreground text-xs">{user.email}</p>
+                </div>
+                <DropdownMenuItem onClick={handleSignOut} className="text-red-500 cursor-pointer">
+                  <LogOut className="mr-2 h-4 w-4" />
+                  Sair
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          ) : (
+            <Button 
+              variant="ghost" 
+              size="default" 
+              className="gap-2"
+              onClick={() => navigate("/auth")}
+            >
+              <User className="h-5 w-5" />
+              <span className="hidden sm:inline">Entrar</span>
+            </Button>
+          )}
           <Button variant="hero" size="default" className="gap-2">
             <ShoppingCart className="h-4 w-4" />
             <span className="hidden sm:inline">Carrinho</span>
