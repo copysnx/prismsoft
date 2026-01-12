@@ -58,11 +58,11 @@ const ProductPage = () => {
         <div className="container mx-auto px-4">
           {/* Back Button */}
           <button 
-            onClick={() => navigate("/")}
-            className="flex items-center gap-2 text-muted-foreground hover:text-foreground transition-colors mb-6"
+            onClick={() => navigate(-1)}
+            className="flex items-center gap-2 px-4 py-2 rounded-xl bg-card border border-border text-muted-foreground hover:text-foreground hover:border-purple-500/50 transition-all mb-6"
           >
-            <ArrowLeft className="h-4 w-4" />
-            Voltar à loja
+            <ArrowLeft className="h-5 w-5" />
+            Voltar
           </button>
 
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
