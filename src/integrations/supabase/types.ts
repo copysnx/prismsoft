@@ -257,6 +257,39 @@ export type Database = {
         }
         Relationships: []
       }
+      phone_verifications: {
+        Row: {
+          attempts: number | null
+          code: string
+          created_at: string | null
+          expires_at: string
+          id: string
+          phone: string
+          user_id: string
+          verified: boolean | null
+        }
+        Insert: {
+          attempts?: number | null
+          code: string
+          created_at?: string | null
+          expires_at: string
+          id?: string
+          phone: string
+          user_id: string
+          verified?: boolean | null
+        }
+        Update: {
+          attempts?: number | null
+          code?: string
+          created_at?: string | null
+          expires_at?: string
+          id?: string
+          phone?: string
+          user_id?: string
+          verified?: boolean | null
+        }
+        Relationships: []
+      }
       product_keys: {
         Row: {
           created_at: string
@@ -353,6 +386,7 @@ export type Database = {
           full_name: string | null
           id: string
           phone: string | null
+          phone_verified: boolean | null
           updated_at: string
         }
         Insert: {
@@ -361,6 +395,7 @@ export type Database = {
           full_name?: string | null
           id: string
           phone?: string | null
+          phone_verified?: boolean | null
           updated_at?: string
         }
         Update: {
@@ -369,6 +404,7 @@ export type Database = {
           full_name?: string | null
           id?: string
           phone?: string | null
+          phone_verified?: boolean | null
           updated_at?: string
         }
         Relationships: []
