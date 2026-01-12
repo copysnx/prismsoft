@@ -21,13 +21,13 @@ const Footer = () => {
               <li><a href="#" className="hover:text-primary transition-colors">Início</a></li>
               <li><a href="#" className="hover:text-primary transition-colors">Produtos</a></li>
               <li><a href="https://discord.gg/HEKCFhaXwF" target="_blank" rel="noopener noreferrer" className="hover:text-primary transition-colors">Suporte</a></li>
-              <li><a href="#" className="hover:text-primary transition-colors">FAQ</a></li>
+              
             </ul>
           </div>
 
           {/* Social */}
           <div>
-            <h3 className="mb-4 font-semibold">Redes Sociais</h3>
+            
             <div className="flex gap-3">
               
               <a href="#" className="flex h-10 w-10 items-center justify-center rounded-lg bg-muted text-muted-foreground hover:bg-purple-600 hover:text-white transition-colors">
