@@ -159,7 +159,7 @@ const TutorialContent = () => {
         </div>
         <Button
           className="bg-[#5865F2] hover:bg-[#4752C4] text-white border-0"
-          onClick={() => window.open("https://discord.gg/prismcheats", "_blank")}
+          onClick={() => window.open("https://discord.gg/HEKCFhaXwF", "_blank")}
         >
           Entrar no Discord
         </Button>
