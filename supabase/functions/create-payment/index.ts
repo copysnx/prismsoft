@@ -1,4 +1,5 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -14,6 +15,8 @@ interface CreatePaymentRequest {
   customerEmail?: string;
   customerPhone?: string;
   expiresIn?: number;
+  orderId?: string;
+  orderNsu?: string;
 }
 
 interface FlowChargeResponse {
@@ -48,6 +51,8 @@ const handler = async (req: Request): Promise<Response> => {
 
   try {
     const FLOW_API_KEY = Deno.env.get('FLOW_API_KEY');
+    const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
+    const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
     
     if (!FLOW_API_KEY) {
       console.error('FLOW_API_KEY not configured');
@@ -56,6 +61,8 @@ const handler = async (req: Request): Promise<Response> => {
         { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
+
+    const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
     const body: CreatePaymentRequest = await req.json();
     console.log('Request body:', JSON.stringify(body));
@@ -113,6 +120,21 @@ const handler = async (req: Request): Promise<Response> => {
 
     if (data.success && data.charge) {
       console.log('Payment created successfully:', data.charge.id);
+
+      // Update order with payment_id if orderId is provided
+      if (body.orderId) {
+        const { error: updateError } = await supabase
+          .from('orders')
+          .update({ payment_id: data.charge.id })
+          .eq('id', body.orderId);
+
+        if (updateError) {
+          console.error('Error updating order with payment_id:', updateError);
+        } else {
+          console.log('Order updated with payment_id:', data.charge.id);
+        }
+      }
+
       return new Response(
         JSON.stringify({
           success: true,

@@ -14,6 +14,8 @@ interface PaymentData {
   pixCode: string;
   qrCodeImage: string;
   expiresDate: string;
+  orderId?: string;
+  orderNsu?: string;
 }
 
 const PaymentPage = () => {
@@ -76,7 +78,10 @@ const PaymentPage = () => {
     const checkPayment = async () => {
       try {
         const { data, error } = await supabase.functions.invoke('verify-payment', {
-          body: { chargeId: paymentData.id }
+          body: { 
+            chargeId: paymentData.id,
+            orderId: paymentData.orderId,
+          }
         });
 
         if (error) {
@@ -145,7 +150,10 @@ const PaymentPage = () => {
     setChecking(true);
     try {
       const { data, error } = await supabase.functions.invoke('verify-payment', {
-        body: { chargeId: paymentData.id }
+        body: { 
+          chargeId: paymentData.id,
+          orderId: paymentData.orderId,
+        }
       });
 
       if (error) throw error;

@@ -1,4 +1,5 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -9,6 +10,7 @@ const FLOW_API_URL = 'https://flowapplications.com.br';
 
 interface VerifyPaymentRequest {
   chargeId: string;
+  orderId?: string;
 }
 
 interface FlowChargeResponse {
@@ -37,6 +39,104 @@ interface FlowChargeResponse {
   error?: string;
 }
 
+async function deliverKeysForOrder(supabase: any, orderId: string, userId: string | null) {
+  console.log('Delivering keys for order:', orderId);
+
+  // Check if keys already delivered
+  const { data: existingDelivery } = await supabase
+    .from('delivered_keys')
+    .select('id')
+    .eq('order_id', orderId)
+    .limit(1);
+
+  if (existingDelivery && existingDelivery.length > 0) {
+    console.log('Keys already delivered for order:', orderId);
+    return { alreadyDelivered: true, count: 0 };
+  }
+
+  // Get order items
+  const { data: orderItems, error: itemsError } = await supabase
+    .from('order_items')
+    .select('*')
+    .eq('order_id', orderId);
+
+  if (itemsError || !orderItems || orderItems.length === 0) {
+    console.error('Order items not found:', itemsError);
+    return { alreadyDelivered: false, count: 0 };
+  }
+
+  let deliveredCount = 0;
+
+  // Process each order item
+  for (const item of orderItems) {
+    console.log(`Processing item: ${item.product_name} - ${item.variation_name}, qty: ${item.quantity}`);
+    
+    // Get available keys for this product/variation
+    const { data: availableKeys, error: keysError } = await supabase
+      .from('product_keys')
+      .select('*')
+      .eq('product_id', item.product_id)
+      .eq('variation_id', item.variation_id)
+      .eq('status', 'available')
+      .limit(item.quantity);
+
+    if (keysError) {
+      console.error('Error fetching keys:', keysError);
+      continue;
+    }
+
+    if (!availableKeys || availableKeys.length === 0) {
+      console.warn(`No keys available for ${item.product_name}`);
+      continue;
+    }
+
+    for (const key of availableKeys) {
+      // Mark key as sold
+      const { error: updateKeyError } = await supabase
+        .from('product_keys')
+        .update({
+          status: 'sold',
+          sold_to: userId || null,
+          sold_at: new Date().toISOString()
+        })
+        .eq('id', key.id);
+
+      if (updateKeyError) {
+        console.error('Error updating key status:', updateKeyError);
+        continue;
+      }
+
+      // Create delivered key record
+      const { error: deliverError } = await supabase
+        .from('delivered_keys')
+        .insert({
+          order_id: orderId,
+          order_item_id: item.id,
+          product_key_id: key.id,
+          key_value: key.key_value
+        });
+
+      if (deliverError) {
+        console.error('Error creating delivery record:', deliverError);
+        continue;
+      }
+
+      deliveredCount++;
+    }
+  }
+
+  // Update order status to delivered if keys were delivered
+  if (deliveredCount > 0) {
+    await supabase
+      .from('orders')
+      .update({ status: 'delivered' })
+      .eq('id', orderId);
+  }
+
+  console.log(`Delivered ${deliveredCount} keys for order ${orderId}`);
+  return { alreadyDelivered: false, count: deliveredCount };
+}
+
 const handler = async (req: Request): Promise<Response> => {
   console.log('Verify payment request received');
   
@@ -47,6 +147,8 @@ const handler = async (req: Request): Promise<Response> => {
 
   try {
     const FLOW_API_KEY = Deno.env.get('FLOW_API_KEY');
+    const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
+    const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
     
     if (!FLOW_API_KEY) {
       console.error('FLOW_API_KEY not configured');
@@ -55,6 +157,8 @@ const handler = async (req: Request): Promise<Response> => {
         { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
+
+    const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
     const body: VerifyPaymentRequest = await req.json();
     console.log('Request body:', JSON.stringify(body));
@@ -96,6 +200,62 @@ const handler = async (req: Request): Promise<Response> => {
       const isPending = status === 'ACTIVE' || status === 'PENDING';
 
       console.log('Payment status:', status, '- isPaid:', isPaid);
+
+      // If payment is confirmed, update order and deliver keys
+      if (isPaid) {
+        // Find the order by payment_id (charge ID)
+        const { data: order, error: orderError } = await supabase
+          .from('orders')
+          .select('*')
+          .eq('payment_id', body.chargeId)
+          .maybeSingle();
+
+        if (order && !orderError) {
+          console.log('Found order:', order.id);
+
+          // Update order status to paid if not already
+          if (order.status === 'pending') {
+            await supabase
+              .from('orders')
+              .update({
+                status: 'paid',
+                paid_at: new Date().toISOString(),
+                transaction_nsu: data.charge.transactionID || null,
+              })
+              .eq('id', order.id);
+
+            // Deliver keys
+            const deliveryResult = await deliverKeysForOrder(supabase, order.id, order.user_id);
+            console.log('Delivery result:', deliveryResult);
+          }
+        } else {
+          console.log('Order not found by payment_id, trying orderId from request');
+          
+          // Try orderId if provided
+          if (body.orderId) {
+            const { data: orderById } = await supabase
+              .from('orders')
+              .select('*')
+              .eq('id', body.orderId)
+              .maybeSingle();
+
+            if (orderById && orderById.status === 'pending') {
+              await supabase
+                .from('orders')
+                .update({
+                  status: 'paid',
+                  paid_at: new Date().toISOString(),
+                  payment_id: body.chargeId,
+                  transaction_nsu: data.charge.transactionID || null,
+                })
+                .eq('id', orderById.id);
+
+              const deliveryResult = await deliverKeysForOrder(supabase, orderById.id, orderById.user_id);
+              console.log('Delivery result:', deliveryResult);
+            }
+          }
+        }
+      }
 
       return new Response(
         JSON.stringify({
