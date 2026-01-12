@@ -24,8 +24,7 @@ const Header = () => {
         {/* Logo */}
         <Link to="/" className="flex items-center gap-2">
           <img src="/logo.png" alt="Logo" className="h-8 w-8" />
-          <span className="text-lg font-bold text-foreground">Prism SysteM<span className="text-gradient">SysteM</span>
-          </span>
+          <span className="text-lg font-bold"><span className="text-gradient">SysteM</span></span>
         </Link>
 
         {/* Search Bar */}
