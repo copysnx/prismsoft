@@ -211,7 +211,7 @@ const CheckoutPage = () => {
       const isFreeOrder = total < 1;
 
       if (isFreeOrder) {
-        // Free order - mark as paid and deliver keys directly
+        // Free order - mark as paid and deliver keys automatically
         console.log('Free order detected, processing automatic delivery');
         
         try {
@@ -227,6 +227,20 @@ const CheckoutPage = () => {
 
           if (updateError) {
             console.error('Error updating order status:', updateError);
+          }
+
+          // Automatically deliver keys for free orders
+          const { data: deliveryData, error: deliveryError } = await supabase.functions.invoke('auto-deliver-keys', {
+            body: {
+              orderId: orderData.order.id,
+              orderNsu: orderNsu,
+            }
+          });
+
+          if (deliveryError) {
+            console.error('Error auto-delivering keys:', deliveryError);
+          } else {
+            console.log('Keys auto-delivered:', deliveryData);
           }
 
           // Store order data and navigate to success page
