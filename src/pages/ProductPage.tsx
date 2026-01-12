@@ -5,12 +5,16 @@ import { Button } from "@/components/ui/button";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
 import { getProductBySlug, Product, ProductVariation } from "@/data/products";
+import { useCart } from "@/hooks/useCart";
+import { useToast } from "@/hooks/use-toast";
 
 const ProductPage = () => {
   const { slug } = useParams<{ slug: string }>();
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
   const product = getProductBySlug(slug || "");
+  const { addItem } = useCart();
+  const { toast } = useToast();
   
   const [selectedVariation, setSelectedVariation] = useState<ProductVariation | null>(null);
 
@@ -25,6 +29,31 @@ const ProductPage = () => {
   const handleVariationChange = (variation: ProductVariation) => {
     setSelectedVariation(variation);
     setSearchParams({ variation: variation.id });
+  };
+
+  const handleAddToCart = () => {
+    if (!product || !selectedVariation) return;
+    
+    addItem({
+      productId: String(product.id),
+      productSlug: product.slug,
+      productName: product.name,
+      productImage: product.image,
+      variationId: selectedVariation.id,
+      variationName: selectedVariation.name,
+      price: selectedVariation.price,
+      originalPrice: selectedVariation.originalPrice,
+    });
+
+    toast({
+      title: "Adicionado ao carrinho!",
+      description: `${product.name} - ${selectedVariation.name}`,
+    });
+  };
+
+  const handleBuyNow = () => {
+    handleAddToCart();
+    navigate('/checkout');
   };
 
   if (!product) {
@@ -158,11 +187,11 @@ const ProductPage = () => {
 
                 {/* Action Buttons */}
                 <div className="space-y-3">
-                  <Button variant="hero" size="lg" className="w-full gap-2">
+                  <Button variant="hero" size="lg" className="w-full gap-2" onClick={handleBuyNow}>
                     <ShoppingCart className="h-5 w-5" />
                     Comprar agora
                   </Button>
-                  <Button variant="heroOutline" size="lg" className="w-full gap-2">
+                  <Button variant="heroOutline" size="lg" className="w-full gap-2" onClick={handleAddToCart}>
                     Adicionar ao carrinho
                   </Button>
                 </div>
