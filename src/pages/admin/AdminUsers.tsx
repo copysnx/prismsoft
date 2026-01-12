@@ -74,6 +74,42 @@ const AdminUsers = () => {
   useEffect(() => {
     if (isAdmin) {
       fetchUsers();
+
+      // Subscribe to real-time updates for profiles and user_roles
+      const profilesChannel = supabase
+        .channel('admin-profiles-updates')
+        .on(
+          'postgres_changes',
+          {
+            event: '*',
+            schema: 'public',
+            table: 'profiles'
+          },
+          () => {
+            fetchUsers();
+          }
+        )
+        .subscribe();
+
+      const rolesChannel = supabase
+        .channel('admin-roles-updates')
+        .on(
+          'postgres_changes',
+          {
+            event: '*',
+            schema: 'public',
+            table: 'user_roles'
+          },
+          () => {
+            fetchUsers();
+          }
+        )
+        .subscribe();
+
+      return () => {
+        supabase.removeChannel(profilesChannel);
+        supabase.removeChannel(rolesChannel);
+      };
     }
   }, [isAdmin]);
 
