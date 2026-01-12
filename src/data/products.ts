@@ -66,9 +66,9 @@ export const products: Product[] = [
       "Anti-ban integrado"
     ],
     variations: [
-      { id: "diario", name: "Diário", price: 7.90, originalPrice: 12.90, stock: 100 },
-      { id: "7-dias", name: "7 Dias", price: 24.90, originalPrice: 39.90, stock: 50 },
-      { id: "30-dias", name: "30 Dias", price: 39.90, originalPrice: 79.90, stock: 50 },
+      { id: "diario", name: "Diário", price: 9.90, originalPrice: 14.90, stock: 100 },
+      { id: "7-dias", name: "7 Dias", price: 39.90, originalPrice: 59.90, stock: 50 },
+      { id: "30-dias", name: "30 Dias", price: 89.90, originalPrice: 119.90, stock: 50 },
       { id: "lifetime", name: "Lifetime", price: 119.90, originalPrice: 199.90, stock: 20 },
     ]
   },
