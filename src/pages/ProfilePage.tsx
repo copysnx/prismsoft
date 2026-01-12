@@ -11,7 +11,8 @@ import {
   Lock, 
   Eye, 
   EyeOff,
-  Trash2
+  Trash2,
+  Phone
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -35,6 +36,7 @@ const ProfilePage = () => {
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const [fullName, setFullName] = useState("");
+  const [phone, setPhone] = useState("");
   const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
@@ -60,7 +62,7 @@ const ProfilePage = () => {
       try {
         const { data, error } = await supabase
           .from("profiles")
-          .select("full_name, avatar_url")
+          .select("full_name, avatar_url, phone")
           .eq("id", user.id)
           .maybeSingle();
 
@@ -68,6 +70,7 @@ const ProfilePage = () => {
           console.error("Error fetching profile:", error);
         } else if (data) {
           setFullName(data.full_name || "");
+          setPhone(data.phone || "");
           setAvatarUrl(data.avatar_url);
         }
       } catch (error) {
@@ -179,7 +182,7 @@ const ProfilePage = () => {
     try {
       const { error } = await supabase
         .from("profiles")
-        .update({ full_name: fullName })
+        .update({ full_name: fullName, phone: phone })
         .eq("id", user.id);
 
       if (error) {
@@ -428,6 +431,23 @@ const ProfilePage = () => {
                         onChange={(e) => setFullName(e.target.value)}
                         className="bg-muted/50 border-border focus:border-primary"
                       />
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label htmlFor="phone" className="text-sm text-muted-foreground">
+                        Telefone
+                      </Label>
+                      <div className="relative">
+                        <Phone className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                        <Input
+                          id="phone"
+                          type="tel"
+                          placeholder="(00) 00000-0000"
+                          value={phone}
+                          onChange={(e) => setPhone(e.target.value)}
+                          className="pl-10 bg-muted/50 border-border focus:border-primary"
+                        />
+                      </div>
                     </div>
 
                     <Button
