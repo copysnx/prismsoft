@@ -4,6 +4,7 @@ import { Eye, EyeOff, Mail, Lock, User, ArrowLeft } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Checkbox } from "@/components/ui/checkbox";
 import { useAuth } from "@/hooks/useAuth";
 import { toast } from "sonner";
 import { z } from "zod";
@@ -11,12 +12,15 @@ import { z } from "zod";
 const emailSchema = z.string().email("Email inválido");
 const passwordSchema = z.string().min(6, "A senha deve ter pelo menos 6 caracteres");
 
+const REMEMBER_EMAIL_KEY = "prism-remember-email";
+
 const AuthPage = () => {
   const [isLogin, setIsLogin] = useState(true);
   const [showPassword, setShowPassword] = useState(false);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [fullName, setFullName] = useState("");
+  const [rememberMe, setRememberMe] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [errors, setErrors] = useState<{ email?: string; password?: string; fullName?: string }>({});
   
@@ -28,6 +32,15 @@ const AuthPage = () => {
       navigate("/");
     }
   }, [user, loading, navigate]);
+
+  // Load remembered email on mount
+  useEffect(() => {
+    const savedEmail = localStorage.getItem(REMEMBER_EMAIL_KEY);
+    if (savedEmail) {
+      setEmail(savedEmail);
+      setRememberMe(true);
+    }
+  }, []);
 
   const validateForm = () => {
     const newErrors: { email?: string; password?: string; fullName?: string } = {};
@@ -59,6 +72,13 @@ const AuthPage = () => {
     
     try {
       if (isLogin) {
+        // Save or remove email based on remember me preference
+        if (rememberMe) {
+          localStorage.setItem(REMEMBER_EMAIL_KEY, email);
+        } else {
+          localStorage.removeItem(REMEMBER_EMAIL_KEY);
+        }
+
         const { error } = await signIn(email, password);
         if (error) {
           if (error.message.includes("Invalid login credentials")) {
@@ -198,7 +218,15 @@ const AuthPage = () => {
             </div>
 
             {isLogin && (
-              <div className="text-right">
+              <div className="flex items-center justify-between">
+                <label className="flex items-center gap-2 cursor-pointer">
+                  <Checkbox
+                    checked={rememberMe}
+                    onCheckedChange={(checked) => setRememberMe(checked as boolean)}
+                    className="data-[state=checked]:bg-purple-500 data-[state=checked]:border-purple-500"
+                  />
+                  <span className="text-sm text-muted-foreground">Lembrar email</span>
+                </label>
                 <button
                   type="button"
                   onClick={() => navigate("/forgot-password")}
