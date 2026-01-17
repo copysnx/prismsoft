@@ -199,8 +199,9 @@ const ProductPage = () => {
           </button>
 
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
-            {/* Product Image */}
-            <div className="lg:col-span-4">
+            {/* Product Image + Description Column */}
+            <div className="lg:col-span-4 space-y-6">
+              {/* Product Image */}
               <div className="relative rounded-2xl overflow-hidden border border-border bg-card">
                 <img
                   src={product.image_url || '/placeholder.svg'}
@@ -212,6 +213,23 @@ const ProductPage = () => {
                     -{discount}% OFF
                   </div>
                 )}
+              </div>
+
+              {/* Description Section - Below Image */}
+              <div className="bg-card rounded-2xl border border-border p-6">
+                <h2 className="text-xl font-bold mb-4 text-gradient">{product.name}</h2>
+                <p className="text-muted-foreground mb-6">{product.description}</p>
+                
+                <div className="grid grid-cols-1 gap-4">
+                  {product.features.map((feature, index) => (
+                    <div key={index} className="flex items-center gap-3 p-3 rounded-xl bg-muted/30 border border-border">
+                      <div className="w-8 h-8 rounded-lg bg-gradient-to-r from-purple-600 to-fuchsia-600 flex items-center justify-center">
+                        <Check className="h-4 w-4 text-white" />
+                      </div>
+                      <span className="text-sm font-medium">{feature}</span>
+                    </div>
+                  ))}
+                </div>
               </div>
             </div>
 
@@ -340,23 +358,6 @@ const ProductPage = () => {
                   <Button variant="heroOutline" size="lg" className="w-full gap-2" onClick={handleAddToCart}>
                     Adicionar ao carrinho
                   </Button>
-                </div>
-              </div>
-
-              {/* Description Section */}
-              <div className="mt-6 bg-card rounded-2xl border border-border p-6">
-                <h2 className="text-xl font-bold mb-4 text-gradient">{product.name}</h2>
-                <p className="text-muted-foreground mb-6">{product.description}</p>
-                
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  {product.features.map((feature, index) => (
-                    <div key={index} className="flex items-center gap-3 p-3 rounded-xl bg-muted/30 border border-border">
-                      <div className="w-8 h-8 rounded-lg bg-gradient-to-r from-purple-600 to-fuchsia-600 flex items-center justify-center">
-                        <Check className="h-4 w-4 text-white" />
-                      </div>
-                      <span className="text-sm font-medium">{feature}</span>
-                    </div>
-                  ))}
                 </div>
               </div>
             </div>
