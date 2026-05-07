@@ -305,6 +305,22 @@ const AuthPage = () => {
               )}
               Continuar com Google
             </Button>
+
+            {/* Quick Admin Login */}
+            <Button
+              type="button"
+              variant="outline"
+              size="lg"
+              className="w-full gap-2 border-purple-500/50 text-purple-400 hover:bg-purple-500/10 hover:text-purple-300"
+              onClick={() => {
+                setEmail("manoitalo8@gmail.com");
+                setIsLogin(true);
+                toast.info("Email de admin preenchido. Digite a senha para entrar.");
+              }}
+            >
+              <Shield className="h-5 w-5" />
+              Login Rápido Admin
+            </Button>
           </form>
 
           {/* Toggle Login/Signup */}
