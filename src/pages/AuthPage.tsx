@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { Eye, EyeOff, Mail, Lock, User, ArrowLeft } from "lucide-react";
+import { Eye, EyeOff, Mail, Lock, User, ArrowLeft, Shield } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -304,6 +304,22 @@ const AuthPage = () => {
                 </svg>
               )}
               Continuar com Google
+            </Button>
+
+            {/* Quick Admin Login */}
+            <Button
+              type="button"
+              variant="outline"
+              size="lg"
+              className="w-full gap-2 border-purple-500/50 text-purple-400 hover:bg-purple-500/10 hover:text-purple-300"
+              onClick={() => {
+                setEmail("manoitalo8@gmail.com");
+                setIsLogin(true);
+                toast.info("Email de admin preenchido. Digite a senha para entrar.");
+              }}
+            >
+              <Shield className="h-5 w-5" />
+              Login Rápido Admin
             </Button>
           </form>
 
