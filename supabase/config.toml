@@ -35,3 +35,6 @@ verify_jwt = false
 
 [functions.blackcat-webhook]
 verify_jwt = false
+
+[functions.blackcat-verify-payment]
+verify_jwt = false
