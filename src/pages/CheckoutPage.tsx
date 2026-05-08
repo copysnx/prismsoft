@@ -262,19 +262,24 @@ const CheckoutPage = () => {
       }
 
       if (paymentMethod === 'pix') {
-        // PIX payment via FlowPay API
+        // PIX payment via BlackCat Pay
         const productNames = items.map(item => `${item.productName} (${item.variationName})`).join(', ');
-        
-        const { data, error } = await supabase.functions.invoke('create-payment', {
+
+        const { data, error } = await supabase.functions.invoke('blackcat-create-payment', {
           body: {
             value: total,
             description: `Compra: ${productNames}`,
-            customerName: `${contactInfo.firstName} ${contactInfo.lastName}`.trim(),
+            customerName: `${contactInfo.firstName} ${contactInfo.lastName}`.trim() || 'Cliente',
             customerEmail: contactInfo.email,
-            customerPhone: contactInfo.phone,
-            expiresIn: 3600, // 1 hour
+            customerPhone: contactInfo.phone || '11999999999',
+            expiresIn: 3600,
             orderId: orderData.order.id,
             orderNsu: orderNsu,
+            items: items.map(item => ({
+              title: `${item.productName} - ${item.variationName}`,
+              quantity: item.quantity,
+              unitPrice: item.price,
+            })),
           }
         });
 
@@ -283,7 +288,6 @@ const CheckoutPage = () => {
         }
 
         if (data.success && data.payment) {
-          // Store payment data and navigate to payment page
           localStorage.setItem('current-payment', JSON.stringify({
             ...data.payment,
             orderId: orderData.order.id,
