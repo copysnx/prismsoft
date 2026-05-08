@@ -112,9 +112,15 @@ serve(async (req) => {
 
     const tx = data.data;
     const qrBase64: string | undefined = tx.paymentData?.qrCodeBase64;
-    const qrImage = qrBase64
-      ? (qrBase64.startsWith('data:') ? qrBase64 : `data:image/png;base64,${qrBase64}`)
-      : '';
+    const emv: string = tx.paymentData?.qrCode || tx.paymentData?.copyPaste || '';
+    // BlackCat sometimes returns the EMV text in qrCodeBase64 instead of a real PNG.
+    // Detect a valid base64 image; otherwise generate a QR image from the EMV payload.
+    const looksLikeBase64Png = !!qrBase64 && /^[A-Za-z0-9+/=\s]+$/.test(qrBase64) && qrBase64.length > 200;
+    const qrImage = qrBase64 && qrBase64.startsWith('data:')
+      ? qrBase64
+      : looksLikeBase64Png
+        ? `data:image/png;base64,${qrBase64}`
+        : (emv ? `https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=${encodeURIComponent(emv)}` : '');
 
     if (body.orderId) {
       await supabase.from('orders').update({ payment_id: tx.transactionId }).eq('id', body.orderId);
