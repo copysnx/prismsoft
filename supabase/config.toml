@@ -29,3 +29,12 @@ verify_jwt = false
 
 [functions.auto-deliver-keys]
 verify_jwt = false
+
+[functions.blackcat-create-payment]
+verify_jwt = false
+
+[functions.blackcat-webhook]
+verify_jwt = false
+
+[functions.blackcat-verify-payment]
+verify_jwt = false
