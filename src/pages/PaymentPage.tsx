@@ -79,7 +79,7 @@ const PaymentPage = () => {
 
     const checkPayment = async () => {
       try {
-        const { data, error } = await supabase.functions.invoke('blackcat-verify-payment', {
+        const { data, error } = await supabase.functions.invoke('misticpay-verify-payment', {
           body: { 
             chargeId: paymentData.id,
             orderId: paymentData.orderId,
@@ -151,7 +151,7 @@ const PaymentPage = () => {
     
     setChecking(true);
     try {
-      const { data, error } = await supabase.functions.invoke('blackcat-verify-payment', {
+      const { data, error } = await supabase.functions.invoke('misticpay-verify-payment', {
         body: { 
           chargeId: paymentData.id,
           orderId: paymentData.orderId,
