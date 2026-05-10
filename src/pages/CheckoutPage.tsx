@@ -262,10 +262,10 @@ const CheckoutPage = () => {
       }
 
       if (paymentMethod === 'pix') {
-        // PIX payment via BlackCat Pay
+        // PIX payment via MisticPay
         const productNames = items.map(item => `${item.productName} (${item.variationName})`).join(', ');
 
-        const { data, error } = await supabase.functions.invoke('blackcat-create-payment', {
+        const { data, error } = await supabase.functions.invoke('misticpay-create-payment', {
           body: {
             value: total,
             description: `Compra: ${productNames}`,
