@@ -1,6 +1,6 @@
 import { useEffect } from "react";
 import { useNavigate, Link } from "react-router-dom";
-import { Users, BarChart3, ArrowLeft, Key, Tag } from "lucide-react";
+import { Users, BarChart3, ArrowLeft, Key, Tag, Package } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { useAdmin } from "@/hooks/useAdmin";
 import { Button } from "@/components/ui/button";
