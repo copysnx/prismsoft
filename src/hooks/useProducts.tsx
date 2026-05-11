@@ -15,6 +15,7 @@ export interface Product {
   name: string;
   description: string | null;
   category: string;
+  category_id: string | null;
   image_url: string | null;
   rating: number;
   features: string[];
