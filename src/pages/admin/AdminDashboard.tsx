@@ -1,6 +1,6 @@
 import { useEffect } from "react";
 import { useNavigate, Link } from "react-router-dom";
-import { Users, BarChart3, ArrowLeft, Key, Tag, Package } from "lucide-react";
+import { Users, BarChart3, ArrowLeft, Key, Tag, Package, FolderTree } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { useAdmin } from "@/hooks/useAdmin";
 import { Button } from "@/components/ui/button";
@@ -41,6 +41,13 @@ const AdminDashboard = () => {
       icon: Package,
       href: "/admin/products",
       color: "from-purple-500 to-fuchsia-500",
+    },
+    {
+      title: "Categorias",
+      description: "Gerenciar categorias da Store",
+      icon: FolderTree,
+      href: "/admin/categories",
+      color: "from-orange-500 to-amber-500",
     },
     {
       title: "Keys & Estoque",

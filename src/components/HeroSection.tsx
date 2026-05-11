@@ -1,5 +1,6 @@
-import { MessageCircle, Headphones } from "lucide-react";
+import { Store, Headphones } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { Link } from "react-router-dom";
 import heroBg from "@/assets/hero-bg.jpg";
 const HeroSection = () => {
   return <section className="relative min-h-[80vh] flex items-center overflow-hidden">
@@ -45,10 +46,10 @@ const HeroSection = () => {
           animationDelay: "0.2s"
         }}>
             <Button variant="hero" size="lg" className="gap-2" asChild>
-              <a href="https://discord.gg/HEKCFhaXwF" target="_blank" rel="noopener noreferrer">
-                <MessageCircle className="h-5 w-5" />
-                Comunidade
-              </a>
+              <Link to="/store">
+                <Store className="h-5 w-5" />
+                Store
+              </Link>
             </Button>
             <Button variant="heroOutline" size="lg" className="gap-2" asChild>
               <a href="https://discord.gg/HEKCFhaXwF" target="_blank" rel="noopener noreferrer">

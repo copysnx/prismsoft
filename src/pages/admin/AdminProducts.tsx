@@ -4,11 +4,13 @@ import { ArrowLeft, Plus, Pencil, Trash2, Package, Loader2 } from "lucide-react"
 import { useAuth } from "@/hooks/useAuth";
 import { useAdmin } from "@/hooks/useAdmin";
 import { useProducts, Product, ProductVariation } from "@/hooks/useProducts";
+import { useCategories } from "@/hooks/useCategories";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import {
   Dialog,
   DialogContent,
@@ -40,6 +42,7 @@ const emptyProduct = {
   name: "",
   description: "",
   category: "",
+  category_id: null as string | null,
   image_url: "",
   rating: 5,
   features: [] as string[],
@@ -51,6 +54,7 @@ const AdminProducts = () => {
   const { user, loading: authLoading } = useAuth();
   const { isAdmin, loading: adminLoading } = useAdmin();
   const { products, loading: productsLoading, createProduct, updateProduct, deleteProduct } = useProducts();
+  const { categories } = useCategories();
   const navigate = useNavigate();
 
   const [isDialogOpen, setIsDialogOpen] = useState(false);
@@ -86,6 +90,7 @@ const AdminProducts = () => {
       name: product.name,
       description: product.description || "",
       category: product.category,
+      category_id: product.category_id,
       image_url: product.image_url || "",
       rating: product.rating,
       features: product.features,
@@ -317,7 +322,7 @@ const AdminProducts = () => {
 
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
-                <Label htmlFor="category">Categoria</Label>
+                <Label htmlFor="category">Categoria (texto)</Label>
                 <Input
                   id="category"
                   value={formData.category}
@@ -326,14 +331,36 @@ const AdminProducts = () => {
                 />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="image_url">URL da Imagem</Label>
-                <Input
-                  id="image_url"
-                  value={formData.image_url}
-                  onChange={(e) => setFormData({ ...formData, image_url: e.target.value })}
-                  placeholder="https://..."
-                />
+                <Label>Categoria da Store</Label>
+                <Select
+                  value={formData.category_id ?? "none"}
+                  onValueChange={(v) =>
+                    setFormData({ ...formData, category_id: v === "none" ? null : v })
+                  }
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Nenhuma" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="none">Nenhuma</SelectItem>
+                    {categories.map((c) => (
+                      <SelectItem key={c.id} value={c.id}>
+                        {c.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               </div>
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="image_url">URL da Imagem</Label>
+              <Input
+                id="image_url"
+                value={formData.image_url}
+                onChange={(e) => setFormData({ ...formData, image_url: e.target.value })}
+                placeholder="https://..."
+              />
             </div>
 
             <div className="space-y-2">
