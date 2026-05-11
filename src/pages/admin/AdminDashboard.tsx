@@ -1,6 +1,6 @@
 import { useEffect } from "react";
 import { useNavigate, Link } from "react-router-dom";
-import { Users, BarChart3, ArrowLeft, Key, Tag } from "lucide-react";
+import { Users, BarChart3, ArrowLeft, Key, Tag, Package } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { useAdmin } from "@/hooks/useAdmin";
 import { Button } from "@/components/ui/button";
@@ -35,6 +35,13 @@ const AdminDashboard = () => {
   }
 
   const menuItems = [
+    {
+      title: "Produtos",
+      description: "Criar, editar e excluir produtos",
+      icon: Package,
+      href: "/admin/products",
+      color: "from-purple-500 to-fuchsia-500",
+    },
     {
       title: "Keys & Estoque",
       description: "Gerenciar licenças e estoque",
@@ -94,7 +101,7 @@ const AdminDashboard = () => {
 
       {/* Content */}
       <main className="container mx-auto px-4 py-8">
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-6">
           {menuItems.map((item) => (
             <Link
               key={item.href}
