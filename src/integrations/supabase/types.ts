@@ -114,7 +114,7 @@ export type Database = {
           key_value: string
           order_id: string
           order_item_id: string
-          product_key_id: string
+          product_key_id: string | null
         }
         Insert: {
           delivered_at?: string
@@ -122,7 +122,7 @@ export type Database = {
           key_value: string
           order_id: string
           order_item_id: string
-          product_key_id: string
+          product_key_id?: string | null
         }
         Update: {
           delivered_at?: string
@@ -130,7 +130,7 @@ export type Database = {
           key_value?: string
           order_id?: string
           order_item_id?: string
-          product_key_id?: string
+          product_key_id?: string | null
         }
         Relationships: [
           {
