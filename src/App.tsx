@@ -52,11 +52,14 @@ const App = () => (
               <Route path="/termos" element={<TermsPage />} />
               <Route path="/admin" element={<AdminDashboard />} />
               <Route path="/admin/products" element={<AdminProducts />} />
+              <Route path="/admin/categories" element={<AdminCategories />} />
               
               <Route path="/admin/keys" element={<AdminKeys />} />
               <Route path="/admin/coupons" element={<AdminCoupons />} />
               <Route path="/admin/reports" element={<AdminReports />} />
               <Route path="/admin/users" element={<AdminUsers />} />
+              <Route path="/store" element={<StorePage />} />
+              <Route path="/store/:slug" element={<CategoryPage />} />
               <Route path="/produto/:slug" element={<ProductPage />} />
               {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
               <Route path="*" element={<NotFound />} />
