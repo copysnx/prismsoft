@@ -46,10 +46,10 @@ const HeroSection = () => {
           animationDelay: "0.2s"
         }}>
             <Button variant="hero" size="lg" className="gap-2" asChild>
-              <a href="https://discord.gg/HEKCFhaXwF" target="_blank" rel="noopener noreferrer">
-                <MessageCircle className="h-5 w-5" />
-                Comunidade
-              </a>
+              <Link to="/store">
+                <Store className="h-5 w-5" />
+                Store
+              </Link>
             </Button>
             <Button variant="heroOutline" size="lg" className="gap-2" asChild>
               <a href="https://discord.gg/HEKCFhaXwF" target="_blank" rel="noopener noreferrer">
