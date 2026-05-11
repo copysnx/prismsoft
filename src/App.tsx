@@ -19,11 +19,14 @@ import ProfilePage from "./pages/ProfilePage";
 import PurchasesPage from "./pages/PurchasesPage";
 import AdminDashboard from "./pages/admin/AdminDashboard";
 import AdminProducts from "./pages/admin/AdminProducts";
+import AdminCategories from "./pages/admin/AdminCategories";
 
 import AdminKeys from "./pages/admin/AdminKeys";
 import AdminCoupons from "./pages/admin/AdminCoupons";
 import AdminReports from "./pages/admin/AdminReports";
 import AdminUsers from "./pages/admin/AdminUsers";
+import StorePage from "./pages/StorePage";
+import CategoryPage from "./pages/CategoryPage";
 import NotFound from "./pages/NotFound";
 const queryClient = new QueryClient();
 
