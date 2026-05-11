@@ -36,6 +36,13 @@ const AdminDashboard = () => {
 
   const menuItems = [
     {
+      title: "Produtos",
+      description: "Criar, editar e excluir produtos",
+      icon: Package,
+      href: "/admin/products",
+      color: "from-purple-500 to-fuchsia-500",
+    },
+    {
       title: "Keys & Estoque",
       description: "Gerenciar licenças e estoque",
       icon: Key,
