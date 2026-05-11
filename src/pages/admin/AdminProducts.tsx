@@ -87,6 +87,7 @@ const AdminProducts = () => {
       name: product.name,
       description: product.description || "",
       category: product.category,
+      category_id: product.category_id,
       image_url: product.image_url || "",
       rating: product.rating,
       features: product.features,
