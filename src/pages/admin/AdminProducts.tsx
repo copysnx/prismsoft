@@ -54,6 +54,7 @@ const AdminProducts = () => {
   const { user, loading: authLoading } = useAuth();
   const { isAdmin, loading: adminLoading } = useAdmin();
   const { products, loading: productsLoading, createProduct, updateProduct, deleteProduct } = useProducts();
+  const { categories } = useCategories();
   const navigate = useNavigate();
 
   const [isDialogOpen, setIsDialogOpen] = useState(false);
