@@ -40,6 +40,7 @@ const emptyProduct = {
   name: "",
   description: "",
   category: "",
+  category_id: null as string | null,
   image_url: "",
   rating: 5,
   features: [] as string[],
