@@ -43,6 +43,13 @@ const AdminDashboard = () => {
       color: "from-purple-500 to-fuchsia-500",
     },
     {
+      title: "Categorias",
+      description: "Gerenciar categorias da Store",
+      icon: FolderTree,
+      href: "/admin/categories",
+      color: "from-orange-500 to-amber-500",
+    },
+    {
       title: "Keys & Estoque",
       description: "Gerenciar licenças e estoque",
       icon: Key,
