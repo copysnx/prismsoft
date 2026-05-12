@@ -500,6 +500,31 @@ export type Database = {
       }
     }
     Functions: {
+      get_active_coupon_by_code: {
+        Args: { _code: string }
+        Returns: {
+          code: string
+          created_at: string
+          current_uses: number | null
+          description: string | null
+          discount_type: string
+          discount_value: number
+          id: string
+          is_active: boolean | null
+          max_uses: number | null
+          min_purchase: number | null
+          restricted_to_role: Database["public"]["Enums"]["app_role"] | null
+          updated_at: string
+          valid_from: string | null
+          valid_until: string | null
+        }
+        SetofOptions: {
+          from: "*"
+          to: "coupons"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]

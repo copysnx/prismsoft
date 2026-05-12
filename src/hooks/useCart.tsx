@@ -140,19 +140,14 @@ export const CartProvider = ({ children }: { children: ReactNode }) => {
     setIsValidatingCoupon(true);
     
     try {
-      // Fetch coupon from database
+      // Fetch coupon via secure RPC (clients cannot list all coupons)
       const { data, error } = await supabase
-        .from('coupons')
-        .select('*')
-        .eq('code', upperCode)
-        .eq('is_active', true)
-        .single();
+        .rpc('get_active_coupon_by_code', { _code: upperCode });
 
-      if (error || !data) {
+      const coupon = Array.isArray(data) ? data[0] : data;
+      if (error || !coupon) {
         return { success: false, error: 'Cupom não encontrado ou inválido' };
       }
-
-      const coupon = data;
       const now = new Date();
 
       // Check role restriction
