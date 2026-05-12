@@ -8,7 +8,7 @@ const corsHeaders = {
 };
 
 const MISTICPAY_API_URL = 'https://api.misticpay.com/api';
-const MIN_PAYMENT_VALUE = 1.00;
+const MIN_PAYMENT_VALUE = 1.50;
 
 const RequestSchema = z.object({
   value: z.number().positive().max(999999),
