@@ -47,27 +47,10 @@ export const useProductKeys = (productId?: string, variationId?: string) => {
 
   useEffect(() => {
     fetchKeys();
-
-    // Subscribe to real-time updates for product_keys table
-    const channel = supabase
-      .channel('product-keys-changes')
-      .on(
-        'postgres_changes',
-        {
-          event: '*',
-          schema: 'public',
-          table: 'product_keys'
-        },
-        () => {
-          // Refetch keys on any change
-          fetchKeys();
-        }
-      )
-      .subscribe();
-
-    return () => {
-      supabase.removeChannel(channel);
-    };
+    // Poll for changes every 10 seconds (realtime is disabled on product_keys
+    // because it contains sensitive key_value data)
+    const interval = setInterval(fetchKeys, 10000);
+    return () => clearInterval(interval);
   }, [fetchKeys]);
 
   const addKeys = async (productId: string, variationId: string, keyValues: string[]) => {

@@ -40,31 +40,11 @@ export const useRealTimeStock = (productId?: string) => {
   };
 
   useEffect(() => {
-    // Always fetch when productId changes (including from undefined to a value)
     fetchStock();
-
-    // Subscribe to real-time updates on product_keys table
-    // When keys are added/sold, refetch from the secure view
-    const channel = supabase
-      .channel(`stock-updates-${productId || 'all'}`)
-      .on(
-        'postgres_changes',
-        {
-          event: '*',
-          schema: 'public',
-          table: 'product_keys',
-          ...(productId ? { filter: `product_id=eq.${productId}` } : {})
-        },
-        () => {
-          // Refetch stock counts on any change
-          fetchStock();
-        }
-      )
-      .subscribe();
-
-    return () => {
-      supabase.removeChannel(channel);
-    };
+    // Poll for stock updates every 8 seconds (realtime broadcast on product_keys
+    // is disabled because the table contains sensitive key_value data)
+    const interval = setInterval(fetchStock, 8000);
+    return () => clearInterval(interval);
   }, [productId]);
 
   const getStock = (productId: string, variationId: string): number => {

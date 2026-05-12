@@ -51,17 +51,12 @@ export const useCoupons = () => {
     const upperCode = code.toUpperCase().trim();
     
     const { data, error } = await supabase
-      .from('coupons')
-      .select('*')
-      .eq('code', upperCode)
-      .eq('is_active', true)
-      .single();
+      .rpc('get_active_coupon_by_code', { _code: upperCode });
 
-    if (error || !data) {
+    const coupon = (Array.isArray(data) ? data[0] : data) as Coupon | null;
+    if (error || !coupon) {
       return { valid: false, error: 'Cupom não encontrado ou inválido' };
     }
-
-    const coupon = data as Coupon;
     const now = new Date();
 
     // Check role restriction
