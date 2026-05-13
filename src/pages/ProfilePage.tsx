@@ -28,7 +28,6 @@ import BackButton from "@/components/BackButton";
 
 // Import the purchases page content components
 import PurchasesContent from "@/components/profile/PurchasesContent";
-import TutorialContent from "@/components/profile/TutorialContent";
 
 const ProfilePage = () => {
   const { user, loading: authLoading } = useAuth();
