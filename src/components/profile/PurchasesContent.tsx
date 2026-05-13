@@ -1,10 +1,12 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { Package, Key, Copy, Check, Calendar, CreditCard, Loader2 } from "lucide-react";
+import { Package, Key, Copy, Check, Calendar, CreditCard, Loader2, MessageCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
+import OrderChat from "./OrderChat";
 
 interface OrderItem {
   id: string;
