@@ -328,8 +328,18 @@ const PurchasesContent = () => {
           </DialogHeader>
           {chatOrder && (
             <OrderChat
-              orderId={chatOrder.id}
-              orderNumber={chatOrder.order_nsu || chatOrder.id.slice(0, 8)}
+              order={{
+                id: chatOrder.id,
+                orderNumber: chatOrder.order_nsu || chatOrder.id.slice(0, 8).toUpperCase(),
+                total_amount: chatOrder.total_amount,
+                payment_method: chatOrder.payment_method,
+                created_at: chatOrder.created_at,
+                items: chatOrder.items.map((i) => ({
+                  product_name: i.product_name,
+                  variation_name: i.variation_name,
+                  quantity: i.quantity,
+                })),
+              }}
             />
           )}
         </DialogContent>
