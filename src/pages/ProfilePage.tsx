@@ -371,13 +371,6 @@ const ProfilePage = () => {
                 Produtos & Keys
               </TabsTrigger>
               <TabsTrigger 
-                value="tutorials" 
-                className="flex items-center gap-2 rounded-full px-6 py-2 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground"
-              >
-                <BookOpen className="h-4 w-4" />
-                Tutoriais
-              </TabsTrigger>
-              <TabsTrigger 
                 value="profile" 
                 className="flex items-center gap-2 rounded-full px-6 py-2 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground"
               >
@@ -389,11 +382,6 @@ const ProfilePage = () => {
             {/* Products & Keys Tab */}
             <TabsContent value="products">
               <PurchasesContent />
-            </TabsContent>
-
-            {/* Tutorials Tab */}
-            <TabsContent value="tutorials">
-              <TutorialContent />
             </TabsContent>
 
             {/* Profile Tab */}
