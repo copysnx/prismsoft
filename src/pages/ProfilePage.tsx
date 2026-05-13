@@ -6,7 +6,6 @@ import {
   Save, 
   Loader2, 
   Key, 
-  BookOpen, 
   Mail, 
   Lock, 
   Eye, 
