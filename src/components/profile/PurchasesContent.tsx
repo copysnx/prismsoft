@@ -1,10 +1,12 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { Package, Key, Copy, Check, Calendar, CreditCard, Loader2 } from "lucide-react";
+import { Package, Key, Copy, Check, Calendar, CreditCard, Loader2, MessageCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
+import OrderChat from "./OrderChat";
 
 interface OrderItem {
   id: string;
@@ -41,6 +43,7 @@ const PurchasesContent = () => {
   const [orders, setOrders] = useState<Order[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [copiedKey, setCopiedKey] = useState<string | null>(null);
+  const [chatOrder, setChatOrder] = useState<Order | null>(null);
 
   useEffect(() => {
     const fetchOrders = async () => {
@@ -233,7 +236,8 @@ const PurchasesContent = () => {
                 return (
                   <div
                     key={item.id}
-                    className="bg-muted/30 rounded-xl p-4 border border-border/50"
+                    onClick={() => setChatOrder(order)}
+                    className="bg-muted/30 rounded-xl p-4 border border-border/50 cursor-pointer hover:border-purple-500/50 hover:bg-muted/50 transition-colors"
                   >
                     <div className="flex items-start justify-between mb-3">
                       <div>
@@ -242,9 +246,12 @@ const PurchasesContent = () => {
                           {item.variation_name} x{item.quantity}
                         </p>
                       </div>
-                      <span className="text-sm font-medium">
-                        {formatPrice(item.price * item.quantity)}
-                      </span>
+                      <div className="flex items-center gap-2">
+                        <span className="text-sm font-medium">
+                          {formatPrice(item.price * item.quantity)}
+                        </span>
+                        <MessageCircle className="h-4 w-4 text-purple-400" />
+                      </div>
                     </div>
 
                     {/* Delivered Keys */}
@@ -260,6 +267,7 @@ const PurchasesContent = () => {
                           {itemKeys.map((key) => (
                             <div
                               key={key.id}
+                              onClick={(e) => e.stopPropagation()}
                               className="flex items-center gap-2 bg-background/50 rounded-lg p-2 border border-border/30"
                             >
                               <code className="flex-1 text-sm font-mono text-foreground break-all">
@@ -269,7 +277,10 @@ const PurchasesContent = () => {
                                 variant="ghost"
                                 size="icon"
                                 className="h-8 w-8 shrink-0"
-                                onClick={() => handleCopyKey(key.key_value)}
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  handleCopyKey(key.key_value);
+                                }}
                               >
                                 {copiedKey === key.key_value ? (
                                   <Check className="h-4 w-4 text-green-500" />
@@ -309,6 +320,20 @@ const PurchasesContent = () => {
           </div>
         </div>
       ))}
+
+      <Dialog open={!!chatOrder} onOpenChange={(o) => !o && setChatOrder(null)}>
+        <DialogContent className="max-w-2xl p-0 bg-transparent border-0 shadow-none">
+          <DialogHeader className="sr-only">
+            <DialogTitle>Chat do pedido</DialogTitle>
+          </DialogHeader>
+          {chatOrder && (
+            <OrderChat
+              orderId={chatOrder.id}
+              orderNumber={chatOrder.order_nsu || chatOrder.id.slice(0, 8)}
+            />
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };
