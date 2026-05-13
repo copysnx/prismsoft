@@ -236,7 +236,8 @@ const PurchasesContent = () => {
                 return (
                   <div
                     key={item.id}
-                    className="bg-muted/30 rounded-xl p-4 border border-border/50"
+                    onClick={() => setChatOrder(order)}
+                    className="bg-muted/30 rounded-xl p-4 border border-border/50 cursor-pointer hover:border-purple-500/50 hover:bg-muted/50 transition-colors"
                   >
                     <div className="flex items-start justify-between mb-3">
                       <div>
@@ -245,9 +246,12 @@ const PurchasesContent = () => {
                           {item.variation_name} x{item.quantity}
                         </p>
                       </div>
-                      <span className="text-sm font-medium">
-                        {formatPrice(item.price * item.quantity)}
-                      </span>
+                      <div className="flex items-center gap-2">
+                        <span className="text-sm font-medium">
+                          {formatPrice(item.price * item.quantity)}
+                        </span>
+                        <MessageCircle className="h-4 w-4 text-purple-400" />
+                      </div>
                     </div>
 
                     {/* Delivered Keys */}
