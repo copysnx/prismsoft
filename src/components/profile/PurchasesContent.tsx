@@ -320,6 +320,20 @@ const PurchasesContent = () => {
           </div>
         </div>
       ))}
+
+      <Dialog open={!!chatOrder} onOpenChange={(o) => !o && setChatOrder(null)}>
+        <DialogContent className="max-w-2xl p-0 bg-transparent border-0 shadow-none">
+          <DialogHeader className="sr-only">
+            <DialogTitle>Chat do pedido</DialogTitle>
+          </DialogHeader>
+          {chatOrder && (
+            <OrderChat
+              orderId={chatOrder.id}
+              orderNumber={chatOrder.order_nsu || chatOrder.id.slice(0, 8)}
+            />
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };
