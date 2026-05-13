@@ -43,6 +43,7 @@ const PurchasesContent = () => {
   const [orders, setOrders] = useState<Order[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [copiedKey, setCopiedKey] = useState<string | null>(null);
+  const [chatOrder, setChatOrder] = useState<Order | null>(null);
 
   useEffect(() => {
     const fetchOrders = async () => {
