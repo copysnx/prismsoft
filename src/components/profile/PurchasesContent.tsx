@@ -267,6 +267,7 @@ const PurchasesContent = () => {
                           {itemKeys.map((key) => (
                             <div
                               key={key.id}
+                              onClick={(e) => e.stopPropagation()}
                               className="flex items-center gap-2 bg-background/50 rounded-lg p-2 border border-border/30"
                             >
                               <code className="flex-1 text-sm font-mono text-foreground break-all">
@@ -276,7 +277,10 @@ const PurchasesContent = () => {
                                 variant="ghost"
                                 size="icon"
                                 className="h-8 w-8 shrink-0"
-                                onClick={() => handleCopyKey(key.key_value)}
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  handleCopyKey(key.key_value);
+                                }}
                               >
                                 {copiedKey === key.key_value ? (
                                   <Check className="h-4 w-4 text-green-500" />
